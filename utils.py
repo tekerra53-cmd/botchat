@@ -3,6 +3,7 @@ import re
 import os
 import json
 import difflib
+import time
 from flask import current_app
 from flask_login import current_user
 from datetime import datetime
@@ -745,26 +746,43 @@ def _bm25_score(query, text):
 
 
 def _get_embedding(text):
+    global client
     global last_openai_error
     if not client:
         return None
     text = _truncate(text, 2000)
     if not text:
         return None
-    try:
-        resp = client.embeddings.create(
-            model=EMBEDDING_MODEL,
-            input=text,
-            encoding_format="float"
-        )
-        return resp.data[0].embedding
-    except Exception as exc:
-        last_openai_error = str(exc)
+    max_retries = 3
+    backoff = 0.5
+    for attempt in range(max_retries):
         try:
-            current_app.logger.warning(f"Embedding generation failed: {exc}")
-        except Exception:
-            pass
-        return None
+            resp = client.embeddings.create(
+                model=EMBEDDING_MODEL,
+                input=text,
+                encoding_format="float"
+            )
+            last_openai_error = None
+            return resp.data[0].embedding
+        except Exception as exc:
+            last_openai_error = str(exc)
+            if _is_openai_capacity_error(exc):
+                client = None
+                try:
+                    current_app.logger.warning(f"Embedding generation disabled due to quota/billing error: {exc}")
+                except Exception:
+                    pass
+                return None
+            if attempt < max_retries - 1:
+                time.sleep(backoff)
+                backoff *= 2
+            else:
+                try:
+                    current_app.logger.warning(f"Embedding generation failed: {exc}")
+                except Exception:
+                    pass
+                return None
+    return None
 
 
 def upsert_embedding(content_type, content_id, text):
