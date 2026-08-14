@@ -23,6 +23,12 @@ _QUERY_EXPANSIONS = {
     "fee": ["tuition", "payment", "school fees", "charges", "cost"],
     "fees": ["tuition", "payment", "school fees", "charges", "cost"],
     "tuition": ["fees", "payment", "school fees", "cost"],
+    "course": ["courses", "classes", "modules", "subjects", "programs", "offerings", "curriculum"],
+    "courses": ["course", "classes", "modules", "subjects", "programs", "offerings", "curriculum"],
+    "program": ["programs", "courses", "curriculum", "degree", "major"],
+    "programs": ["program", "courses", "curriculum", "degree", "major"],
+    "offered": ["available", "listed", "run", "taught", "provided"],
+    "offering": ["available", "listed", "taught", "program", "course"],
     "id": ["student id", "id card", "identity card", "student card"],
     "student id": ["student id card", "id card", "identity card"],
     "registration": ["course registration", "enrollment", "register", "sign up"],
@@ -1005,6 +1011,16 @@ def seed_common_knowledge_base():
             "question": "How do I access student welfare support?",
             "answer": "Visit the student welfare office or speak to your department if you are facing financial or personal hardship. Meal subsidies and emergency grants may be available.",
             "category": "student support",
+        },
+        {
+            "question": "What courses are offered here?",
+            "answer": "Course offerings depend on the faculty, department, and academic session. Check the official course catalogue, department page, or student portal for the current list. If you tell me your faculty, department, or level, I can narrow it down.",
+            "category": "academics",
+        },
+        {
+            "question": "Tell me about this university",
+            "answer": "This university assistant can help with admissions, academic programs, course registration, hostel accommodation, library services, results and transcripts, student support, and campus life. Ask me about any of those and I’ll guide you.",
+            "category": "general",
         },
     ]
 
@@ -2157,14 +2173,38 @@ def _looks_like_refusal(text):
 
 def _fallback_general_reply(query):
     q = (query or "").strip()
+    q_lower = q.lower()
     if is_greeting(q):
         return "I’m doing well, thanks for asking. How can I help with the university today?"
+    if any(term in q_lower for term in ("course", "courses", "program", "programs", "offer", "offered", "available", "curriculum", "subjects")):
+        return (
+            "Course offerings depend on the department and academic session. "
+            "If you tell me your faculty, department, or level, I can help narrow it down."
+        )
+    if "about this university" in q_lower or "tell me about this university" in q_lower:
+        return (
+            "This university assistant can help with admissions, courses, registration, fees, hostel, library, results, "
+            "policies, and student services. Ask me about any of those and I’ll help."
+        )
     if not q:
         return "How can I help?"
     return (
         "I couldn’t find an exact match in this university’s records, but I can still help. "
         "Try asking about admissions, fees, hostel, registration, library, results, policies, or campus services."
     )
+
+
+def _strip_markdown_text(text):
+    lines = []
+    for raw in (text or "").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        line = re.sub(r"^#{1,6}\s*", "", line)
+        line = re.sub(r"^[-*•]\s*", "", line)
+        line = re.sub(r"^\d+[\.\)]\s*", "", line)
+        lines.append(line.strip())
+    return "\n".join(lines).strip()
 
 
 def _anchor_to_this_university(text):
@@ -2226,7 +2266,7 @@ def _compose_local_response(query, items):
         score = _relevance_score(item)
         if score < best_score * 0.3:
             continue
-        text = (item.get('full_text') or "").strip()
+        text = _strip_markdown_text((item.get('full_text') or "").strip())
         if not text:
             continue
         key = (item.get('type'), (item.get('snippet') or "")[:40].lower())
@@ -2253,7 +2293,7 @@ def _format_kb_answer(query, item):
     if not item:
         return ""
 
-    body = (item.get('full_text') or '').strip()
+    body = _strip_markdown_text((item.get('full_text') or '').strip())
     if not body:
         return ""
 
