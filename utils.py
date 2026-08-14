@@ -502,6 +502,273 @@ def seed_common_knowledge_base():
             "aliases": "report issue, student complaint",
             "related_questions": "How long do complaints take to resolve?; Who handles student complaints?",
         },
+        {
+            "title": "Student Discounts",
+            "question": "What discounts are available for students?",
+            "answer": "Students receive discounts on software (Microsoft Office, Adobe), public transportation, museum entries, and local businesses. Show your student ID to access discounts. Check the student portal for a list of participating vendors.",
+            "category": "student life",
+            "tags": "discounts,student deals,savings",
+            "aliases": "student deals, campus discounts",
+            "related_questions": "How do I get a student discount on software?; Are there discounts for local events?",
+        },
+        {
+            "title": "IT Support",
+            "question": "How do I get IT support?",
+            "answer": "Contact the ICT help desk through the portal, support email, or phone. Common issues include WiFi, email, portal access, and software installation. For urgent issues, visit the ICT office during working hours.",
+            "category": "it",
+            "tags": "it support,ict,wifi,email,technical support",
+            "aliases": "ict support, technical support, help desk",
+            "related_questions": "How do I connect to campus WiFi?; How do I set up my student email?",
+        },
+        {
+            "title": "Campus WiFi",
+            "question": "How do I connect to campus WiFi?",
+            "answer": "Use the campus network name (SSID) and your student credentials. If you cannot connect, contact ICT support or check the portal for WiFi setup instructions.",
+            "category": "it",
+            "tags": "wifi,network,internet,ict",
+            "aliases": "campus wifi, wireless, internet",
+            "related_questions": "Where is the ICT help desk?; Why is my WiFi not working?",
+        },
+        {
+            "title": "Career Services",
+            "question": "Where can I get career advice or job placement help?",
+            "answer": "The career services office offers CV reviews, interview prep, internship listings, and job placement support. Check the portal or student affairs for upcoming career fairs and workshops.",
+            "category": "career",
+            "tags": "career,internship,job,placement,cv",
+            "aliases": "career advice, job placement, internships",
+            "related_questions": "How do I apply for internships?; When is the next career fair?",
+        },
+        {
+            "title": "Health Center",
+            "question": "Where is the campus health center?",
+            "answer": "The campus health center or clinic is usually located near student affairs or the main campus. It handles minor illnesses, first aid, referrals, and sometimes mental health support.",
+            "category": "health",
+            "tags": "health center,clinic,medical,wellness",
+            "aliases": "campus clinic, medical center",
+            "related_questions": "What services does the health center offer?; How do I get health insurance?",
+        },
+        {
+            "title": "Graduation Application",
+            "question": "How do I apply for graduation?",
+            "answer": "Submit a graduation application through the registry or portal after confirming you have completed all requirements. Pay any required graduation fees and confirm your name details before the deadline.",
+            "category": "graduation",
+            "tags": "graduation,convocation,graduate,apply",
+            "aliases": "apply for graduation, convocation",
+            "related_questions": "When is the graduation deadline?; What is the graduation fee?",
+        },
+        {
+            "title": "Exam Recheck",
+            "question": "How do I request a recheck of my exam results?",
+            "answer": "Submit a recheck request to the exam office or department within the allowed timeframe. Pay the recheck fee if required and keep your student ID and course details ready.",
+            "category": "exams",
+            "tags": "recheck,remark,exam results,grades",
+            "aliases": "result recheck, exam remark",
+            "related_questions": "How much does a recheck cost?; How long does a recheck take?",
+        },
+        {
+            "title": "Add/Drop Courses",
+            "question": "How do I add or drop courses after registration?",
+            "answer": "Use the add/drop option in the student portal during the allowed window. Dropping courses late may attract penalties or affect your GPA. Confirm any changes with your department.",
+            "category": "registration",
+            "tags": "add/drop,courses,registration,semester",
+            "aliases": "add drop, change courses",
+            "related_questions": "When does the add/drop period end?; Can I add a course after the deadline?",
+        },
+        {
+            "title": "Student Clubs",
+            "question": "How do I join a student club or society?",
+            "answer": "Check the student affairs office, portal, or notice board for active clubs. Register during club recruitment week or contact the club executive directly. Participation can enhance your campus experience.",
+            "category": "student life",
+            "tags": "clubs,societies,activities,student life",
+            "aliases": "student clubs, societies, campus activities",
+            "related_questions": "What clubs are available on campus?; How do I start a new club?",
+        },
+        {
+            "title": "Banking on Campus",
+            "question": "Are there banks or ATMs on campus?",
+            "answer": "Most campuses have partner banks or ATM machines inside or near key locations like the library, hostel, or admin block. Check the campus map or student portal for exact locations.",
+            "category": "student life",
+            "tags": "banking,atm,money,campus",
+            "aliases": "atm, bank, campus bank",
+            "related_questions": "Which banks are on campus?; How do I pay fees at the bank?",
+        },
+        {
+            "title": "Campus Safety",
+            "question": "Who do I contact for campus safety or emergency?",
+            "answer": "Contact campus security, the safety office, or emergency services immediately if there is a threat. Save the campus security number and follow safety guidelines published by the university.",
+            "category": "safety",
+            "tags": "safety,security,emergency,campus",
+            "aliases": "campus security, emergency contact",
+            "related_questions": "What is the campus emergency number?; How do I report a safety hazard?",
+        },
+        {
+            "title": "International Students",
+            "question": "What support is available for international students?",
+            "answer": "International students should register with the international office, obtain a student visa, and attend orientation. The international office helps with immigration, accommodation, and cultural adjustment.",
+            "category": "student life",
+            "tags": "international students,visa,orientation",
+            "aliases": "international, foreign students",
+            "related_questions": "How do I renew my student visa?; What is the international student orientation?",
+        },
+        {
+            "title": "Student Email",
+            "question": "How do I access my student email?",
+            "answer": "Student email is usually provided after registration. Use your student ID or matric number as the username and the initial password provided by ICT. If you cannot access it, contact ICT support.",
+            "category": "it",
+            "tags": "email,student email,ict,communication",
+            "aliases": "school email, student mail",
+            "related_questions": "How do I reset my student email password?; Why is my student email not working?",
+        },
+        {
+            "title": "Academic Appeal",
+            "question": "How do I appeal an academic decision?",
+            "answer": "Write to the department head or exam board within the appeal window. State the grounds for appeal clearly and attach any supporting evidence. Check the student handbook for appeal procedures.",
+            "category": "student support",
+            "tags": "appeal,academic appeal,decision,grievance",
+            "aliases": "appeal decision, academic grievance",
+            "related_questions": "What is the appeal deadline?; Who handles academic appeals?",
+        },
+    ]
+
+    faqs = [
+        {
+            "question": "How do I pay my school fees?",
+            "answer": "Use the student portal or approved bank channel. Keep your receipt and confirm that the payment reflects before the deadline.",
+            "category": "fees",
+        },
+        {
+            "question": "When does course registration open?",
+            "answer": "Course registration dates are published in the academic calendar and on the portal. Register early to avoid penalties.",
+            "category": "registration",
+        },
+        {
+            "question": "Where can I find my exam timetable?",
+            "answer": "The exam timetable is posted on the portal and department notice board before exams begin.",
+            "category": "exams",
+        },
+        {
+            "question": "How do I request a transcript?",
+            "answer": "Submit a request at the registry or records office, complete the form, and pay any applicable fee.",
+            "category": "records",
+        },
+        {
+            "question": "What are the library opening hours?",
+            "answer": "Check the library notice board, portal, or official handbook for current opening and closing times.",
+            "category": "library",
+        },
+        {
+            "question": "How do I apply for hostel accommodation?",
+            "answer": "Apply through the housing office or portal. Apply early because space is limited.",
+            "category": "hostel",
+        },
+        {
+            "question": "What scholarships are available?",
+            "answer": "Scholarships are announced on the portal, notice board, and student affairs office. Check eligibility and deadlines regularly.",
+            "category": "financial aid",
+        },
+        {
+            "question": "How do I get career help?",
+            "answer": "Visit the career services office for CV reviews, interview prep, and internship listings.",
+            "category": "career",
+        },
+        {
+            "question": "Where is the campus health center?",
+            "answer": "The health center is usually located near student affairs. It handles minor illnesses and first aid.",
+            "category": "health",
+        },
+        {
+            "question": "How do I connect to campus WiFi?",
+            "answer": "Use the campus SSID and your student credentials. Contact ICT if you have trouble.",
+            "category": "it",
+        },
+        {
+            "question": "Who do I contact for campus safety?",
+            "answer": "Save the campus security number and contact them immediately in an emergency.",
+            "category": "safety",
+        },
+        {
+            "question": "How do I join a student club?",
+            "answer": "Check student affairs or the portal for active clubs and recruitment schedules.",
+            "category": "student life",
+        },
+        {
+            "question": "What discounts do students get?",
+            "answer": "Show your student ID for discounts on software, transport, museums, and local businesses.",
+            "category": "student life",
+        },
+        {
+            "question": "How do I appeal an academic decision?",
+            "answer": "Submit a written appeal to the department head or exam board within the allowed timeframe.",
+            "category": "student support",
+        },
+    ]
+
+    policies = [
+        {
+            "title": "Admission Policy",
+            "content": "Admission is based on minimum entry requirements, entrance exam scores, and available slots. Applicants must submit authentic credentials. Deferment may be granted on reasonable grounds with written approval.",
+            "category": "admissions",
+        },
+        {
+            "title": "Course Registration Policy",
+            "content": "Students must register for courses before the deadline. Late registration attracts a penalty and requires departmental approval. Students must meet prerequisites before registering.",
+            "category": "registration",
+        },
+        {
+            "title": "Fee Payment Policy",
+            "content": "All fees must be paid by the published deadline. Late payment attracts a surcharge. Payments must be made through approved channels. Outstanding fees may block graduation or examination entry.",
+            "category": "fees",
+        },
+        {
+            "title": "Examination Policy",
+            "content": "Students must present a valid ID card in the exam hall. Exam misconduct may result in cancellation of results. Absence without an approved excuse is recorded as fail. Rechecks must be requested within the stated timeframe.",
+            "category": "exams",
+        },
+        {
+            "title": "Results and Grading Policy",
+            "content": "Results are released after grading is complete. Students may request a recheck within the allowed period. Grade appeals follow the academic grievance procedure. Transcripts are issued after clearance.",
+            "category": "results",
+        },
+        {
+            "title": "Graduation Policy",
+            "content": "Students must complete all program requirements, clear all fees and library dues, and submit a graduation application before the deadline. Convocation attendance is optional unless specified by the program.",
+            "category": "graduation",
+        },
+        {
+            "title": "Hostel Accommodation Policy",
+            "content": "Hostel allocation is on a first-come, first-served basis. Students must maintain good conduct and pay rent on time. Room changes require approval from the housing office.",
+            "category": "hostel",
+        },
+        {
+            "title": "Library Policy",
+            "content": "Students must return borrowed books by the due date. Overdue books attract fines. Lost books must be replaced or paid for. Food and loud conversations are prohibited in silent zones.",
+            "category": "library",
+        },
+        {
+            "title": "Career Services Policy",
+            "content": "Career services provide guidance on CV writing, interviews, internships, and job placements. Students are expected to attend scheduled sessions and respect recruiters.",
+            "category": "career",
+        },
+        {
+            "title": "Health Services Policy",
+            "content": "The campus health center provides primary care, first aid, and referrals. Students should carry their health card or student ID. Emergency cases are prioritized.",
+            "category": "health",
+        },
+        {
+            "title": "IT Acceptable Use Policy",
+            "content": "Students must use campus IT resources responsibly. Unauthorized access, hacking, or misuse of networks is prohibited. ICT credentials must not be shared.",
+            "category": "it",
+        },
+        {
+            "title": "Campus Safety Policy",
+            "content": "All students must comply with safety rules and report hazards. Campus security patrols key areas. Emergency numbers are posted around campus.",
+            "category": "safety",
+        },
+        {
+            "title": "Student Life and Conduct Policy",
+            "content": "Students are expected to dress appropriately, respect others, and follow campus rules. Clubs must register with student affairs. Misconduct may lead to disciplinary action.",
+            "category": "student life",
+        },
     ]
 
     existing = {
@@ -528,6 +795,43 @@ def seed_common_knowledge_base():
         db.session.flush()
         upsert_embedding("knowledge", entry.id, _knowledge_source_text(entry))
         added += 1
+
+    existing_faqs = {
+        _normalize(row.question)
+        for row in db.session.query(FAQ).all()
+    }
+    for row in faqs:
+        if _normalize(row["question"]) in existing_faqs:
+            continue
+        faq = FAQ(
+            question=row["question"],
+            answer=row["answer"],
+            category=row.get("category", "general"),
+            is_active=True,
+        )
+        db.session.add(faq)
+        db.session.flush()
+        upsert_embedding("faq", faq.id, f"{faq.question}\n{faq.answer}")
+        added += 1
+
+    existing_policies = {
+        _normalize(row.title)
+        for row in db.session.query(Policy).all()
+    }
+    for row in policies:
+        if _normalize(row["title"]) in existing_policies:
+            continue
+        policy = Policy(
+            title=row["title"],
+            content=row["content"],
+            category=row.get("category", "policy"),
+            is_active=True,
+        )
+        db.session.add(policy)
+        db.session.flush()
+        upsert_embedding("policy", policy.id, f"{policy.title}\n{policy.content}")
+        added += 1
+
     if added:
         db.session.commit()
     return added
@@ -767,9 +1071,8 @@ def _get_embedding(text):
         except Exception as exc:
             last_openai_error = str(exc)
             if _is_openai_capacity_error(exc):
-                client = None
                 try:
-                    current_app.logger.warning(f"Embedding generation disabled due to quota/billing error: {exc}")
+                    current_app.logger.warning(f"Embedding generation skipped due to quota/billing error: {exc}")
                 except Exception:
                     pass
                 return None
