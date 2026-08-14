@@ -65,110 +65,154 @@ _QUERY_EXPANSIONS = {
     "bank": ["atm", "money", "finance", "cash"],
 }
 
+_SCHOOL_PROFILE = {
+    "name": "University of Lagos (UNILAG)",
+    "founded": 1962,
+    "type": "federal public university",
+    "owner": "Federal Government of Nigeria",
+    "vice_chancellor": "Professor Folasade T. Ogunsola, OON, FAS",
+    "vice_chancellor_role": "13th Vice-Chancellor",
+    "vice_chancellor_term": "November 12, 2022 to November 11, 2027",
+    "overview": (
+        "The University of Lagos is one of Nigeria's first-generation universities, founded in 1962. "
+        "It is a federal university with a strong research culture, a large campus community, and a broad academic offer across 19 faculties. "
+        "If you want, I can also list any faculty in full or narrow it to a specific department."
+    ),
+}
+
 _CATALOG_FACULTIES = {
+    "faculty of architecture": [
+        "Architecture",
+        "Landscape Architecture and Urban Design",
+        "Interior Architecture and Design",
+    ],
     "faculty of arts": [
-        "Creative Arts",
         "English",
-        "French",
-        "Russian",
-        "History & Strategic Studies",
-        "Linguistic Igbo/Yoruba",
-        "Chinese",
+        "European Languages and Integration Studies",
+        "History and Strategic Studies",
+        "Linguistics, African and Asian Studies",
         "Philosophy",
-        "Christian Religious Studies",
-        "Islamic Religious Studies",
+        "Religious Studies",
+    ],
+    "faculty of basic clinical sciences": [
+        "Anatomic and Molecular Pathology",
+        "Haematology and Blood Transfusion",
+        "Medical Microbiology and Parasitology",
+        "Clinical Pathology",
+        "Clinical Pharmacology",
     ],
     "faculty of basic medical sciences": [
-        "Pharmacology",
+        "Anatomy",
         "Physiology",
-        "Medical Laboratory Science",
+        "Medical Biochemistry",
+        "Pharmacology, Therapeutics and Toxicology",
     ],
     "faculty of clinical sciences": [
-        "Medicine and Surgery",
-        "Nursing",
-        "Physiotherapy",
-        "Radiography",
+        "Anaesthesia",
+        "Community Health and Primary Care",
+        "Medicine",
+        "Obstetrics and Gynaecology",
+        "Ophthalmology",
+        "Paediatrics",
+        "Psychiatry",
+        "Radiation Biology, Radiotherapy and Radiodiagnosis",
+        "Surgery",
+    ],
+    "faculty of communication and media studies": [
+        "Mass Communication",
+        "Public Relations and Advertising",
+        "Journalism, Broadcasting and Media Studies",
+    ],
+    "faculty of computing and informatics": [
+        "Computer Science",
+        "Intelligent Systems and Robotics",
+        "Cybersecurity and Software Engineering",
+    ],
+    "faculty of creative arts": [
+        "Music and Sound Production",
+        "Theatre Arts and Film Studies",
+        "Fine and Applied Arts",
     ],
     "faculty of dental sciences": [
-        "Dentistry",
+        "Child Dental Health",
+        "Oral and Maxillofacial Pathology/Biology",
+        "Oral and Maxillofacial Surgery",
+        "Preventive Dentistry",
+        "Restorative Dentistry",
     ],
     "faculty of education": [
         "Adult Education",
-        "Education Economics",
-        "Business Education",
-        "Education Islamic Religious Studies",
-        "Education Igbo",
-        "Education English",
-        "Early Childhood Education",
-        "Education Yoruba",
-        "Education French",
-        "Education History",
-        "Education Christian Religious Studies",
-        "Education Geography",
-        "Educational Administration",
+        "Arts Education",
         "Educational Foundations",
-        "Health Education",
-        "Human Kinetics Education",
-        "Education Biology",
-        "Education Chemistry",
-        "Education Home Economics",
-        "Integrated Science Education",
-        "Education Mathematics",
-        "Education Physics",
-        "Technology Education",
+        "Educational Management",
+        "Human Kinetics and Health Education",
+        "Science Education",
+        "Social Sciences Education",
+        "Technology and Vocational Education",
     ],
     "faculty of engineering": [
         "Biomedical Engineering",
-        "Chemical & Petroleum Engineering",
-        "Civil & Environmental Engineering",
-        "Computer Engineering",
-        "Electrical & Electronics Engineering",
+        "Chemical Engineering",
+        "Petroleum and Gas Engineering",
+        "Civil and Environmental Engineering",
+        "Electrical and Electronics Engineering",
         "Mechanical Engineering",
-        "Metallurgical & Material Engineering",
-        "Surveying & Geoinformatics Engineering",
+        "Metallurgical and Materials Engineering",
+        "Surveying and Geoinformatics",
         "Systems Engineering",
     ],
     "faculty of environmental sciences": [
-        "Architecture",
         "Building",
         "Estate Management",
         "Quantity Surveying",
-        "Urban & Regional Planning",
+        "Urban and Regional Planning",
+    ],
+    "faculty of health professions": [
+        "Medical Laboratory Science",
+        "Nursing Science",
+        "Physiotherapy",
+        "Radiography",
     ],
     "faculty of law": [
-        "Law",
+        "Commercial and Industrial Law",
+        "Jurisprudence and International Law",
+        "Private and Property Law",
+        "Public Law",
+    ],
+    "faculty of life sciences": [
+        "Biochemistry",
+        "Botany",
+        "Cell Biology and Genetics",
+        "Marine Science",
+        "Microbiology",
+        "Zoology",
+        "Fisheries and Aquaculture",
     ],
     "faculty of management sciences": [
         "Accounting",
-        "Actuarial Science",
-        "Insurance",
+        "Actuarial Science and Insurance",
         "Business Administration",
+        "Employment Relations and Human Resource Management",
         "Finance",
-        "IRPM",
     ],
     "faculty of pharmacy": [
-        "Pharmacy",
+        "Clinical Pharmacy and Biopharmacy",
+        "Pharmaceutical Chemistry",
+        "Pharmaceutical Microbiology and Biotechnology",
+        "Pharmaceutics and Pharmaceutical Technology",
+        "Pharmacognosy",
     ],
-    "faculty of science": [
-        "Botany",
-        "Cell Biology & Genetics",
+    "faculty of physical and earth sciences": [
         "Chemistry",
-        "Computer Science",
-        "Geology",
-        "Geophysics",
-        "Marine Biology",
-        "Fisheries",
+        "Geosciences",
         "Mathematics",
-        "Industrial Mathematics",
-        "Statistics",
-        "Microbiology",
         "Physics",
-        "Zoology",
+        "Statistics",
     ],
     "faculty of social sciences": [
         "Economics",
         "Geography",
-        "Mass Communication",
+        "Library and Information Science",
         "Political Science",
         "Psychology",
         "Social Work",
@@ -1167,8 +1211,28 @@ def seed_common_knowledge_base():
         },
         {
             "question": "Tell me about this university",
-            "answer": "This university assistant can help with admissions, academic programs, course registration, hostel accommodation, library services, results and transcripts, student support, and campus life. Ask me about any of those and I’ll guide you.",
+            "answer": "The University of Lagos (UNILAG) is a federal public university founded in 1962 and owned by the Federal Government of Nigeria. It is one of Nigeria's first-generation universities and now has 19 faculties. Ask me about any faculty, department, admission route, or student service and I can go deeper.",
             "category": "general",
+        },
+        {
+            "question": "Who owns the university?",
+            "answer": "The University of Lagos is a federal public university owned by the Federal Government of Nigeria. It operates under the University of Lagos Act and is part of Nigeria's federal tertiary education system.",
+            "category": "general",
+        },
+        {
+            "question": "Who is the vice chancellor?",
+            "answer": "The current Vice-Chancellor of the University of Lagos is Professor Folasade T. Ogunsola, OON, FAS. She is the 13th Vice-Chancellor and her tenure runs from November 12, 2022 to November 11, 2027.",
+            "category": "general",
+        },
+        {
+            "question": "What faculties are in the university?",
+            "answer": "UNILAG currently has 19 faculties: Architecture, Arts, Basic Clinical Sciences, Basic Medical Sciences, Clinical Sciences, Communication and Media Studies, Computing and Informatics, Creative Arts, Dental Sciences, Education, Engineering, Environmental Sciences, Health Professions, Law, Life Sciences, Management Sciences, Pharmacy, Physical and Earth Sciences, and Social Sciences. Ask for any one faculty and I can list its departments.",
+            "category": "academics",
+        },
+        {
+            "question": "What are the list of departments and faculty in the school?",
+            "answer": "The university has 19 faculties and each faculty contains several departments. Ask me for a specific faculty and I will list its departments in full. For example, Architecture includes Architecture, Landscape Architecture and Urban Design, and Interior Architecture and Design; Engineering includes Biomedical Engineering, Chemical Engineering, Petroleum and Gas Engineering, and more.",
+            "category": "academics",
         },
     ]
 
@@ -2486,7 +2550,8 @@ def _catalog_reply(query):
     q = (query or "").lower()
     matches = []
     for faculty, programs in _CATALOG_FACULTIES.items():
-        if faculty in q or ("faculty" in q and faculty.split("faculty of ", 1)[-1] in q):
+        display = faculty.replace("faculty of ", "")
+        if faculty in q or display in q or ("faculty" in q and display in q):
             matches.append((faculty, programs))
 
     if not matches and any(word in q for word in ("list of faculty", "list of faculties", "what faculties", "departments in this school", "programmes in this school", "programs in this school", "course catalog", "course catalogue")):
@@ -2497,11 +2562,75 @@ def _catalog_reply(query):
 
     lines = ["This university currently offers programmes across these faculties:"]
     for faculty, programs in matches[:4]:
-        lines.append(f"{faculty.title()}:")
+        lines.append(f"{faculty.replace('faculty of ', 'Faculty of ').title()}:")
         lines.extend([f"- {p}" for p in programs[:8]])
         lines.append("")
     lines.append("If you want, I can narrow this to one faculty or department.")
     return "\n".join(lines).strip()
+
+
+def _school_profile_reply(query):
+    q = (query or "").lower()
+    if not q:
+        return None
+
+    wants_overview = any(
+        phrase in q
+        for phrase in (
+            "what can you tell me about the school",
+            "what can u tell me about the school",
+            "tell me about the school",
+            "tell me about this university",
+            "about this university",
+            "about the school",
+            "university overview",
+        )
+    )
+    wants_vc = any(term in q for term in ("vice chancellor", "vice-chancellor", "vc"))
+    wants_owner = any(term in q for term in ("owner", "owns", "founder", "founded by", "proprietor"))
+    wants_faculties = any(
+        term in q
+        for term in (
+            "what faculties",
+            "what are the faculty in the school",
+            "what are the faculties in the school",
+            "list of faculty",
+            "list of faculties",
+            "departments and faculty",
+            "departments in the school",
+            "faculty in the school",
+            "faculty list",
+            "department list",
+        )
+    )
+
+    if not (wants_overview or wants_vc or wants_owner or wants_faculties):
+        return None
+
+    parts = []
+    if wants_overview:
+        parts.append(
+            f"{_SCHOOL_PROFILE['name']} was founded in {_SCHOOL_PROFILE['founded']} as a {_SCHOOL_PROFILE['type']}. "
+            f"It is owned by the {_SCHOOL_PROFILE['owner']} and is known for its research-led, first-generation university culture."
+        )
+        parts.append(_SCHOOL_PROFILE["overview"])
+    if wants_owner:
+        parts.append(f"Ownership: {_SCHOOL_PROFILE['owner']}.")
+    if wants_vc:
+        parts.append(
+            f"Current Vice-Chancellor: {_SCHOOL_PROFILE['vice_chancellor']} "
+            f"({_SCHOOL_PROFILE['vice_chancellor_role']}, {_SCHOOL_PROFILE['vice_chancellor_term']})."
+        )
+    if wants_faculties:
+        parts.append(_catalog_reply("list of faculties in this school") or "")
+
+    followups = [
+        "Which faculty do you want me to expand?",
+        "I can also list departments for one faculty at a time.",
+        "If you want, I can give admission or course details for any faculty.",
+    ]
+    parts.append("Related follow-ups:\n- " + "\n- ".join(followups))
+    return "\n\n".join(part for part in parts if part).strip()
 
 
 def _strip_markdown_text(text):
@@ -2670,6 +2799,10 @@ What would you like to know about?"""
             welcome_msg = "Hello! 👋 Welcome to the University Information Assistant! How can I help you today?"
         
         return welcome_msg, []
+
+    school_profile_answer = _school_profile_reply(query)
+    if school_profile_answer:
+        return school_profile_answer, []
 
     catalog_answer = _catalog_reply(query)
     if catalog_answer:
