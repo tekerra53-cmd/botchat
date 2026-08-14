@@ -4,6 +4,11 @@ document.addEventListener('DOMContentLoaded', function() {
   const sendBtn = document.getElementById('send-btn');
   const clearBtn = document.getElementById('clear-chat');
 
+  // Keep chat text flowing left-to-right so mobile keyboards/browsers do not
+  // auto-switch the composer or user bubbles into RTL mode.
+  messageInput.setAttribute('dir', 'ltr');
+  messageInput.setAttribute('inputmode', 'text');
+
   // Initialize send button state
   function updateSendButton() {
     const hasText = messageInput.value.trim().length > 0;
@@ -24,6 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
+    contentDiv.setAttribute('dir', 'ltr');
     contentDiv.textContent = content;
 
     if (!isUser && Array.isArray(sources) && sources.length > 0) {

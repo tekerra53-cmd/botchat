@@ -443,6 +443,12 @@ body {
   background: transparent;
   flex: 1;
   outline: none;
+  color: #2d3748;
+  direction: ltr;
+  unicode-bidi: plaintext;
+  text-align: left;
+  caret-color: #424769;
+  min-width: 0;
 }
 
 .chat-input:focus {
@@ -625,12 +631,21 @@ body {
   .chat-input {
     border-radius: 16px 16px 0 0;
     border-bottom: 1px solid #e2e8f0;
+    min-height: 56px;
+    padding: 1rem;
+    font-size: 16px;
   }
 
   .btn-send {
     border-radius: 0 0 16px 16px;
     width: 100%;
     min-height: 50px;
+  }
+
+  .message-content {
+    direction: ltr;
+    unicode-bidi: plaintext;
+    text-align: left;
   }
 }
 
