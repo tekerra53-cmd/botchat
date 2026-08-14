@@ -778,7 +778,7 @@ body {
 }
 
 /* Global responsive utilities */
-.container, .admin-container, .chat-wrapper {
+.container, .admin-container {
   max-width: 1200px;
   width: 100%;
   margin-left: auto;
@@ -828,10 +828,21 @@ body {
   }
 }
 
+@media (max-width: 768px) {
+  .form-row {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
 
-  .form-row { flex-direction: column; gap: 0.75rem; }
-  .chat-wrapper { border-radius: 14px; margin: 0.75rem; }
-  .message-content { max-width: 100%; }
+  .chat-wrapper {
+    border-radius: 14px;
+    margin: 0.75rem;
+  }
+
+  .message-content {
+    max-width: 100%;
+  }
+}
 
 h1{
   font-weight :700;
