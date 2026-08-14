@@ -28,6 +28,22 @@ def normalize_sqlite_url(raw_url, base_dir, on_vercel=False):
     return f'sqlite:///{db_path}'
 
 
+def _is_mysql_url(raw_url):
+    if not raw_url:
+        return False
+    return raw_url.startswith('mysql://') or raw_url.startswith('mysql+pymysql://') or raw_url.startswith('mysql+mysqlconnector://')
+
+
+def _normalize_database_url(raw_url, base_dir, on_vercel=False):
+    if not raw_url:
+        return None
+    if _is_mysql_url(raw_url):
+        return raw_url
+    if raw_url.startswith('sqlite:///'):
+        return normalize_sqlite_url(raw_url, base_dir, on_vercel=on_vercel)
+    return raw_url
+
+
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'hardcoded-fallback-for-dev-only'
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -41,7 +57,7 @@ class Config:
     ) if all(os.environ.get(k) for k in ['MYSQL_USER', 'MYSQL_PASSWORD', 'MYSQL_HOST', 'MYSQL_DB']) else None
 
     if database_url:
-        SQLALCHEMY_DATABASE_URI = normalize_sqlite_url(database_url, BASE_DIR, on_vercel=bool(os.environ.get('VERCEL')))
+        SQLALCHEMY_DATABASE_URI = _normalize_database_url(database_url, BASE_DIR, on_vercel=bool(os.environ.get('VERCEL')))
     elif mysql_uri:
         SQLALCHEMY_DATABASE_URI = mysql_uri
     elif os.environ.get('VERCEL'):
@@ -58,12 +74,20 @@ class Config:
         UPLOAD_FOLDER = os.path.join(BASE_DIR, 'instance', 'uploads')
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        'connect_args': {
-            'check_same_thread': False,
-            'timeout': 30,
+    if SQLALCHEMY_DATABASE_URI.startswith('sqlite'):
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'connect_args': {
+                'check_same_thread': False,
+                'timeout': 30,
+            }
         }
-    }
+    else:
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_size': 5,
+            'max_overflow': 10,
+            'pool_timeout': 30,
+            'pool_recycle': 1800,
+        }
     OPENAI_API_KEY = clean_api_key(os.environ.get('OPENAI_API_KEY'))
     
     # Chat settings
