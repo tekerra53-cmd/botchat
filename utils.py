@@ -111,6 +111,7 @@ def init_openai(config):
 
 
 EMBEDDING_MODEL = "text-embedding-3-small"
+CHAT_MODEL = os.environ.get("OPENAI_CHAT_MODEL", "gpt-5.6")
 
 
 def _truncate(text, max_len=2000):
@@ -1964,10 +1965,25 @@ def get_all_faqs(limit=10):
     return cleaned
 
 def is_greeting(query):
-    """Check if the query is a greeting."""
-    greetings = ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening', 'greetings', 'howdy', 'hola', 'bonjour']
-    query_lower = query.lower().strip()
-    return any(greeting in query_lower for greeting in greetings)
+    """Check if the query is a greeting or light conversational opener."""
+    query_lower = (query or "").lower().strip()
+    greetings = [
+        r"\bhello\b",
+        r"\bhi\b",
+        r"\bhey\b",
+        r"\bhow are you\b",
+        r"\bhow are u\b",
+        r"\bhowdy\b",
+        r"\bwhat'?s up\b",
+        r"\bsup\b",
+        r"\bgood morning\b",
+        r"\bgood afternoon\b",
+        r"\bgood evening\b",
+        r"\bgreetings\b",
+        r"\bhola\b",
+        r"\bbonjour\b",
+    ]
+    return any(re.search(pattern, query_lower) for pattern in greetings)
 
 
 def is_school_query(query):
@@ -2126,9 +2142,50 @@ def _suggest_related_questions(items, query, limit=4):
     return cleaned
 
 
+_REFUSAL_PREFIXES = (
+    "sorry, i don't have that info in the knowledge base",
+    "i don't have that in the school knowledge base yet",
+    "i can help with general questions, but i'm currently in offline mode",
+    "i couldn't access the ai service right now",
+)
+
+
+def _looks_like_refusal(text):
+    norm = _normalize(text)
+    return any(norm.startswith(prefix) for prefix in _REFUSAL_PREFIXES)
+
+
+def _fallback_general_reply(query):
+    q = (query or "").strip()
+    if is_greeting(q):
+        return "I’m doing well, thanks for asking. How can I help with the university today?"
+    if not q:
+        return "How can I help?"
+    return (
+        "I couldn’t find an exact match in this university’s records, but I can still help. "
+        "Try asking about admissions, fees, hostel, registration, library, results, policies, or campus services."
+    )
+
+
+def _anchor_to_this_university(text):
+    if not text:
+        return text
+    anchored = text
+    replacements = {
+        r"\byour university\b": "this university",
+        r"\bour university\b": "this university",
+        r"\bthe university\b": "this university",
+        r"\bthe school\b": "this school",
+        r"\bthis school\b": "this university",
+    }
+    for pattern, repl in replacements.items():
+        anchored = re.sub(pattern, repl, anchored, flags=re.IGNORECASE)
+    return anchored
+
+
 def _compose_local_response(query, items):
     if not items:
-        return "Sorry, I don't have that info in the knowledge base. Please contact admin or check the handbook.", []
+        return _fallback_general_reply(query), []
 
     q_norm = _normalize(query)
     q_tokens = set(_tokenize(query))
@@ -2236,6 +2293,16 @@ def generate_rag_response(query, history=None):
     config = current_app.config
     
     history = history or []
+    cleaned_history = []
+    for turn in history:
+        role = turn.get("role")
+        content = (turn.get("content") or "").strip()
+        if not content:
+            continue
+        if role == "assistant" and _looks_like_refusal(content):
+            continue
+        cleaned_history.append({"role": role, "content": content})
+    history = cleaned_history
     
     # Handle greetings specially
     if is_greeting(query):
@@ -2254,114 +2321,71 @@ What would you like to know about?"""
         
         return welcome_msg, []
     
-    search_items = search_kb_items(query, limit=5, history=history)
-    context, sources = search_kb(query, limit=5, history=history)
+    search_items = search_kb_items(query, limit=8, history=history)
+    context, sources = search_kb(query, limit=8, history=history)
     local_answer, local_sources = _compose_local_response(query, search_items)
     q_lower = (query or "").lower()
     admin_hint = ""
     if _is_admin_view() and is_school_query(query) and any(k in q_lower for k in ["tuition", "fee", "fees", "cost", "payment"]):
         admin_hint = "\n\n(Admin tip: add the official fees/tuition info in the Admin dashboard under FAQs or Policies.)"
 
-    if search_items and context.strip():
-        if not config['OPENAI_API_KEY'] or not client:
-            return local_answer + admin_hint, local_sources
-
-        conv_messages = []
-        for turn in history[-6:]:
-            role = turn.get('role', 'user')
-            content = turn.get('content', '')
-            if role == 'user':
-                conv_messages.append({"role": "user", "content": content})
-            else:
-                conv_messages.append({"role": "assistant", "content": content})
-
-        system_prompt = (
-            "You are a helpful university information assistant. "
-            "Cross-check the provided knowledge base sources and answer naturally. "
-            "If the question is only partially covered, give the best safe answer you can based on related information, and say what is uncertain. "
-            "Do not invent official policy, dates, or fees. "
-            "If useful, end with a short 'Related questions:' list containing 2-4 follow-up questions."
-        )
-
-        try:
-            messages = [{"role": "system", "content": system_prompt}]
-            messages.extend(conv_messages)
-            messages.append({
-                "role": "user",
-                "content": f"Knowledge base context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
-            })
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=messages,
-                temperature=0.2,
-                max_tokens=500
-            )
-            answer = response.choices[0].message.content.strip()
-            answer = _strip_question_echo(query, answer)
-            if not answer:
-                answer = local_answer or "Sorry, I don't have that info in the knowledge base. Please contact admin or check the handbook."
-            related = _suggest_related_questions(search_items, query)
-            if related and "related questions:" not in answer.lower():
-                answer = f"{answer}\n\nRelated questions:\n- " + "\n- ".join(related)
-            if admin_hint:
-                answer = f"{answer}{admin_hint}"
-            return answer, sources or local_sources
-        except Exception as e:
-            last_openai_error = str(e)
-            current_app.logger.error(f"RAG error: {str(e)}")
-            if _is_openai_capacity_error(e):
-                client = None
-            if local_answer:
-                return local_answer + admin_hint, local_sources
-            return (
-                "I couldn't access the AI service right now. Please try again later or ask a school-specific question."
-                + admin_hint,
-                sources,
-            )
-
     if not config['OPENAI_API_KEY'] or not client:
-        if local_answer:
-            return local_answer + admin_hint, local_sources
-        if is_school_query(query):
-            return (
-                "I don't have that in the school knowledge base yet. Please check the official handbook or contact admin for accurate details."
-                + admin_hint,
-                [],
-            )
-        return (
-            "I can help with general questions, but I'm currently in offline mode. Please add more details and I'll do my best."
-            + admin_hint,
-            [],
-        )
+        return (local_answer or _fallback_general_reply(query)) + admin_hint, local_sources
+
+    conv_messages = []
+    for turn in history[-6:]:
+        role = turn.get('role', 'user')
+        content = turn.get('content', '')
+        if role == 'user':
+            conv_messages.append({"role": "user", "content": content})
+        else:
+            conv_messages.append({"role": "assistant", "content": content})
+
+    knowledge_context = context.strip() or "No exact knowledge-base match was found."
+    system_prompt = (
+        "You are UniBot, the assistant for this specific university. Answer naturally and directly. "
+        "Never mention or imply another university unless the user explicitly asks for a comparison. "
+        "Use 'this university', 'our school', or 'the campus' when referring to the institution. "
+        "Use the knowledge-base context when it is relevant, but do not refuse to answer just because the context is thin or missing. "
+        "For general questions, answer normally. For university-specific questions, give the best safe answer you can and clearly state what is uncertain instead of saying you cannot help. "
+        "Do not invent official policy, dates, or fees. If helpful, add a short 'Related questions:' list with 2-4 follow-ups."
+    )
 
     try:
-        general_prompt = (
-            "You are a helpful assistant. Answer the user's question clearly and safely. "
-            "Do not repeat the question. If you are unsure, say so briefly."
-            f"\n\nQuestion: {query}\n\nAnswer:"
-        )
+        messages = [{"role": "system", "content": system_prompt}]
+        messages.extend(conv_messages)
+        messages.append({
+            "role": "user",
+            "content": f"Knowledge base context:\n{knowledge_context}\n\nQuestion: {query}\n\nAnswer:"
+        })
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": general_prompt}],
+            model=CHAT_MODEL,
+            messages=messages,
             temperature=0.4,
-            max_tokens=400
+            max_tokens=500
         )
         answer = response.choices[0].message.content.strip()
         answer = _strip_question_echo(query, answer)
+        answer = _anchor_to_this_university(answer)
+        if not answer:
+            answer = local_answer or "I couldn't generate a response right now."
+        related = _suggest_related_questions(search_items, query)
+        if related and "related questions:" not in answer.lower():
+            answer = f"{answer}\n\nRelated questions:\n- " + "\n- ".join(related)
         if admin_hint:
             answer = f"{answer}{admin_hint}"
-        return answer, []
+        return answer, sources or local_sources
     except Exception as e:
         last_openai_error = str(e)
-        current_app.logger.error(f"General AI error: {str(e)}")
+        current_app.logger.error(f"AI error: {str(e)}")
         if _is_openai_capacity_error(e):
             client = None
         if local_answer:
             return local_answer + admin_hint, local_sources
         return (
-            "I couldn't access the AI service right now. Please try again later or ask a school-specific question."
+            _fallback_general_reply(query)
             + admin_hint,
-            [],
+            sources,
         )
 
 def get_fallback(query):
