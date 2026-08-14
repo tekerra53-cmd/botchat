@@ -60,7 +60,7 @@ def init_openai(config):
     if api_key:
         api_key = api_key.strip().strip('"').strip("'")
 
-    if api_key and api_key != 'your_openai_key_here' and api_key.startswith('sk-'):
+    if api_key and api_key != 'your_openai_key_here' and (api_key.startswith('sk-') or api_key.startswith('sk-svcacct-')):
         try:
             # Preferred initialization for modern OpenAI SDK
             client = OpenAI(api_key=api_key)
