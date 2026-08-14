@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, abort
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from config import Config
-from models import db, User, FAQ, Policy, Document, Calendar, ChatSession, ChatMessage, UserFeedback, SystemLog
+from models import db, User, FAQ, Policy, Document, Calendar, ChatSession, ChatMessage, UserFeedback, SystemLog, KnowledgeBaseEntry
 from utils import (
     init_openai,
     generate_rag_response,
@@ -11,6 +11,7 @@ from utils import (
     upsert_embedding,
     delete_embedding,
     rebuild_local_index,
+    rebuild_embeddings_index,
 )
 from werkzeug.utils import secure_filename
 from sqlalchemy.exc import OperationalError
@@ -107,6 +108,10 @@ def create_app():
                 rebuild_local_index()
             except Exception as exc:
                 print(f'[WARN] Local index rebuild skipped: {exc}')
+            try:
+                rebuild_embeddings_index()
+            except Exception as exc:
+                print(f'[WARN] Embedding backfill skipped: {exc}')
     except Exception as exc:
         print(f'[WARN] Startup context setup failed: {exc}')
 

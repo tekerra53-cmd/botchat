@@ -19,6 +19,7 @@ local_index = {
     "idf": {},
 }
 _UNIVERSITY_SEARCH_HINT = None
+EMBEDDING_INDEX_DISABLED = False
 
 _QUERY_EXPANSIONS = {
     "fee": ["tuition", "payment", "school fees", "charges", "cost"],
@@ -32,8 +33,12 @@ _QUERY_EXPANSIONS = {
     "offering": ["available", "listed", "taught", "program", "course"],
     "id": ["student id", "id card", "identity card", "student card"],
     "student id": ["student id card", "id card", "identity card"],
+    "student card": ["student id card", "id card", "identity card", "student id"],
     "registration": ["course registration", "enrollment", "register", "sign up"],
     "register": ["course registration", "enrollment", "add/drop", "sign up"],
+    "late registration": ["register late", "missed registration", "registration deadline"],
+    "miss registration": ["late registration", "registration deadline", "missed registration"],
+    "missed registration": ["late registration", "registration deadline", "late registration process"],
     "admission": ["admissions", "entry requirements", "entry", "apply"],
     "hostel": ["accommodation", "residence", "housing", "dorm"],
     "library": ["library hours", "borrowing", "study space", "books"],
@@ -377,6 +382,13 @@ def _build_query_variants(query, history=None):
             "session dates",
             "calendar",
         ])
+    if any(term in q_lower for term in ("miss registration", "missed registration", "late registration")):
+        variants = [
+            "late registration",
+            "register late",
+            "missed registration",
+            "registration deadline",
+        ] + variants
     if any(term in q_lower for term in ("owner", "founder", "founded", "proprietor")):
         variants.extend([
             "about this university",
@@ -418,7 +430,7 @@ def _build_query_variants(query, history=None):
             if last_user:
                 variants.append(f"{last_user} {base}")
 
-    return _unique_preserve_order(variants[:8])
+    return _unique_preserve_order(variants[:12])
 
 
 def _knowledge_item_to_record(entry):
@@ -1621,6 +1633,113 @@ def delete_embedding(content_type, content_id):
         db.session.commit()
 
 
+def _embed_text_batch(texts):
+    global client
+    global last_openai_error
+    global EMBEDDING_INDEX_DISABLED
+    if not client:
+        return None
+    if EMBEDDING_INDEX_DISABLED:
+        return None
+    cleaned = [_truncate(text, 2000) for text in texts if (text or "").strip()]
+    if not cleaned:
+        return []
+    try:
+        resp = client.embeddings.create(
+            model=EMBEDDING_MODEL,
+            input=cleaned,
+            encoding_format="float",
+        )
+        last_openai_error = None
+        return [item.embedding for item in resp.data]
+    except Exception as exc:
+        last_openai_error = str(exc)
+        if _is_openai_capacity_error(exc):
+            EMBEDDING_INDEX_DISABLED = True
+            try:
+                current_app.logger.warning(f"Embedding batch skipped due to quota/billing error: {exc}")
+            except Exception:
+                pass
+            return None
+        try:
+            current_app.logger.warning(f"Embedding batch failed: {exc}")
+        except Exception:
+            pass
+        return None
+
+
+def rebuild_embeddings_index(batch_size=64):
+    """Backfill missing embeddings for the current searchable content."""
+    if not client or EMBEDDING_INDEX_DISABLED:
+        return 0
+
+    existing = {
+        (row.content_type, row.content_id): row
+        for row in Embedding.query.all()
+    }
+
+    items = []
+    for faq in db.session.query(FAQ).filter_by(is_active=True).all():
+        key = ("faq", faq.id)
+        text = f"Q: {faq.question}\nA: {faq.answer}"
+        if key in existing and (existing[key].text or "").strip() == _truncate(text, 4000):
+            continue
+        items.append((key, text))
+
+    for entry in db.session.query(KnowledgeBaseEntry).filter_by(is_active=True).all():
+        key = ("knowledge", entry.id)
+        text = _knowledge_source_text(entry)
+        if key in existing and (existing[key].text or "").strip() == _truncate(text, 4000):
+            continue
+        items.append((key, text))
+
+    for policy in db.session.query(Policy).filter_by(is_active=True).all():
+        key = ("policy", policy.id)
+        text = f"{policy.title}\n{policy.content}"
+        if key in existing and (existing[key].text or "").strip() == _truncate(text, 4000):
+            continue
+        items.append((key, text))
+
+    for doc in db.session.query(Document).filter_by(is_active=True).all():
+        key = ("document", doc.id)
+        text = f"{doc.title}\n{doc.content}"
+        if key in existing and (existing[key].text or "").strip() == _truncate(text, 4000):
+            continue
+        items.append((key, text))
+
+    if not items:
+        return 0
+
+    updated = 0
+    for start in range(0, len(items), batch_size):
+        chunk = items[start:start + batch_size]
+        texts = [text for _, text in chunk]
+        vectors = _embed_text_batch(texts)
+        if not vectors or len(vectors) != len(chunk):
+            continue
+        for (content_type, content_id), text in chunk:
+            vec = vectors.pop(0)
+            payload = json.dumps(vec)
+            row = existing.get((content_type, content_id))
+            if row:
+                row.text = _truncate(text, 4000)
+                row.vector = payload
+            else:
+                row = Embedding(
+                    content_type=content_type,
+                    content_id=content_id,
+                    text=_truncate(text, 4000),
+                    vector=payload,
+                )
+                db.session.add(row)
+                existing[(content_type, content_id)] = row
+            updated += 1
+
+    if updated:
+        db.session.commit()
+    return updated
+
+
 def _cosine_similarity(a, b):
     if not a or not b or len(a) != len(b):
         return 0.0
@@ -1639,6 +1758,8 @@ def _cosine_similarity(a, b):
 
 
 def semantic_search(query, limit=3):
+    if EMBEDDING_INDEX_DISABLED:
+        return []
     q_emb = _get_embedding(query)
     if q_emb is None:
         return []
@@ -1804,7 +1925,13 @@ def _compute_priority(query, item):
         score += 1
     elif item_type == 'CALENDAR':
         score += 1
-    
+    elif item_type == 'KNOWLEDGE':
+        score += 8
+        if any(t in q_tokens for t in {"late", "miss", "deadline"}) and any(
+            t in combined for t in {"late", "deadline", "register", "registration"}
+        ):
+            score += 8
+
     return score
 
 
@@ -1897,7 +2024,7 @@ def search_kb_items(query, limit=3, history=None):
                 item = _knowledge_item_to_record(entry)
                 if not item:
                     continue
-                item["priority"] = _compute_priority(base_query or search_query, item) + 3
+                item["priority"] = _compute_priority(base_query or search_query, item) + 8
                 _add_result(results, seen, item)
 
         if tokens:
@@ -1908,8 +2035,17 @@ def search_kb_items(query, limit=3, history=None):
     seen = set()
     for search_query in search_queries:
         _collect_for_search(search_query, results, seen)
-        if len(results) >= max(limit * 4, 12):
-            break
+
+    try:
+        semantic_hits = semantic_search(base_query, limit=max(limit, 4))
+        for hit in semantic_hits:
+            _add_result(results, seen, hit)
+    except Exception:
+        pass
+
+    variant_tokens = set()
+    for search_query in search_queries:
+        variant_tokens.update(_tokenize(search_query))
 
     if not results:
         results.extend(local_vector_search(base_query, limit=limit))
@@ -1920,7 +2056,7 @@ def search_kb_items(query, limit=3, history=None):
         for r in results:
             text = (r.get("snippet") or "") + " " + (r.get("full_text") or "")
             tokens = set(_tokenize(text))
-            required = meaningful_tokens if meaningful_tokens else q_tokens
+            required = {t for t in variant_tokens if t not in _STOP_WORDS} or meaningful_tokens or q_tokens
             if tokens.intersection(required):
                 filtered.append(r)
         if filtered:
@@ -1971,7 +2107,7 @@ def search_kb_items(query, limit=3, history=None):
                 item = _knowledge_item_to_record(entry)
                 if not item:
                     continue
-                item["priority"] = 2.5 + score
+                item["priority"] = 4.5 + score
                 _add_result(results, seen_pairs, item)
 
         policies_all = db.session.query(Policy).filter_by(is_active=True).limit(100).all()
@@ -2401,7 +2537,6 @@ def _compose_local_response(query, items):
     if not items:
         return _fallback_general_reply(query), []
 
-    q_norm = _normalize(query)
     q_tokens = set(_tokenize(query))
     meaningful = {t for t in q_tokens if t not in _STOP_WORDS}
 
@@ -2415,23 +2550,21 @@ def _compose_local_response(query, items):
         combined_tokens = set(_tokenize(combined))
         overlap = len(meaningful.intersection(combined_tokens))
         snippet_overlap = len(meaningful.intersection(snippet_tokens))
+        priority = float(item.get("priority") or 0.0)
         if not meaningful:
-            return 1.0
-        return (snippet_overlap * 3 + overlap) / len(meaningful)
+            return priority
+        return (priority * 2.0) + (snippet_overlap * 4.0) + overlap
 
-    ranked = sorted(items, key=_relevance_score, reverse=True)
+    ranked = list(items)
     best = ranked[0]
     best_score = _relevance_score(best)
 
-    if best_score < 0.2:
-        return "", []
-
-    if best_score <= 0 and len(ranked) > 1:
-        for candidate in ranked[1:]:
-            if _relevance_score(candidate) > best_score:
-                best = candidate
-                best_score = _relevance_score(candidate)
-                break
+    if best_score < 1.0 and len(ranked) > 1:
+        alt = max(ranked[1:4], key=_relevance_score, default=best)
+        alt_score = _relevance_score(alt)
+        if alt_score > best_score * 1.25:
+            best = alt
+            best_score = alt_score
 
     answer = _format_kb_answer(query, best)
     if not answer:
@@ -2551,7 +2684,7 @@ What would you like to know about?"""
         admin_hint = "\n\n(Admin tip: add the official fees/tuition info in the Admin dashboard under FAQs or Policies.)"
 
     if not config['OPENAI_API_KEY'] or not client:
-        if local_answer and _answer_uses_query_terms(local_answer, query):
+        if local_answer and local_sources:
             return local_answer + admin_hint, local_sources
         return _fallback_general_reply(query) + admin_hint, local_sources
 
@@ -2603,7 +2736,7 @@ What would you like to know about?"""
         current_app.logger.error(f"AI error: {str(e)}")
         if _is_openai_capacity_error(e):
             client = None
-        if local_answer and _answer_uses_query_terms(local_answer, query):
+        if local_answer and local_sources:
             return local_answer + admin_hint, local_sources
         return (
             _fallback_general_reply(query)
