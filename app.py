@@ -82,9 +82,15 @@ def create_app():
                 admin_user.email = 'admin@university.edu'
             db.session.commit()
 
-        if not db.session.query(KnowledgeBaseEntry).first():
-            seed_common_knowledge_base()
-        rebuild_local_index()
+        try:
+            if not db.session.query(KnowledgeBaseEntry).first():
+                seed_common_knowledge_base()
+        except Exception as exc:
+            current_app.logger.warning(f'Knowledge base seeding skipped: {exc}')
+        try:
+            rebuild_local_index()
+        except Exception as exc:
+            current_app.logger.warning(f'Local index rebuild skipped: {exc}')
 
     @login_manager.user_loader
     def load_user(user_id):
