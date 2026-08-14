@@ -1474,16 +1474,63 @@ def _compose_local_response(query, items):
     if not items:
         return "Sorry, I don't have that info in the knowledge base. Please contact admin or check the handbook.", []
 
-    top = items[0]
-    answer = _format_kb_answer(query, top)
+    q_norm = _normalize(query)
+    q_tokens = set(_tokenize(query))
+    meaningful = {t for t in q_tokens if t not in _STOP_WORDS}
+
+    def _relevance_score(item):
+        snippet = _normalize(item.get('snippet') or "")
+        full_text = _normalize(item.get('full_text') or "")
+        combined = (snippet + " " + full_text).strip()
+        if not combined:
+            return 0.0
+        snippet_tokens = set(_tokenize(snippet))
+        combined_tokens = set(_tokenize(combined))
+        overlap = len(meaningful.intersection(combined_tokens))
+        snippet_overlap = len(meaningful.intersection(snippet_tokens))
+        if not meaningful:
+            return 1.0
+        return (snippet_overlap * 3 + overlap) / len(meaningful)
+
+    ranked = sorted(items, key=_relevance_score, reverse=True)
+    best = ranked[0]
+    best_score = _relevance_score(best)
+
+    if best_score <= 0 and len(ranked) > 1:
+        for candidate in ranked[1:]:
+            if _relevance_score(candidate) > best_score:
+                best = candidate
+                best_score = _relevance_score(candidate)
+                break
+
+    answer = _format_kb_answer(query, best)
     if not answer:
-        answer = (top.get("full_text") or "").strip()
-    if not answer:
-        return "Sorry, I don't have that info in the knowledge base. Please contact admin or check the handbook.", []
+        answer = (best.get("full_text") or "").strip()
+
+    supplementary = []
+    seen_supplements = set()
+    for item in ranked[1:4]:
+        score = _relevance_score(item)
+        if score < best_score * 0.3:
+            continue
+        text = (item.get('full_text') or "").strip()
+        if not text:
+            continue
+        key = (item.get('type'), (item.get('snippet') or "")[:40].lower())
+        if key in seen_supplements:
+            continue
+        seen_supplements.add(key)
+        lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+        supplement = " ".join(lines[:3])[:300]
+        if supplement and supplement.lower() not in answer.lower():
+            supplementary.append(supplement)
+
+    if supplementary:
+        answer += "\n\nAlso:\n- " + "\n- ".join(supplementary)
 
     related = _suggest_related_questions(items, query)
     if related:
-        answer = f"{answer}\n\nYou may also want to ask:\n- " + "\n- ".join(related)
+        answer += f"\n\nYou may also want to ask:\n- " + "\n- ".join(related)
 
     sources = [item["snippet"] for item in items if item.get("snippet")]
     return answer, sources[:5]
