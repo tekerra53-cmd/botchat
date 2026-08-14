@@ -18,6 +18,7 @@ local_index = {
     "vocab": {},
     "idf": {},
 }
+_UNIVERSITY_SEARCH_HINT = None
 
 _QUERY_EXPANSIONS = {
     "fee": ["tuition", "payment", "school fees", "charges", "cost"],
@@ -57,6 +58,117 @@ _QUERY_EXPANSIONS = {
     "discount": ["savings", "deals", "offers", "student deals"],
     "club": ["society", "association", "group", "activities"],
     "bank": ["atm", "money", "finance", "cash"],
+}
+
+_CATALOG_FACULTIES = {
+    "faculty of arts": [
+        "Creative Arts",
+        "English",
+        "French",
+        "Russian",
+        "History & Strategic Studies",
+        "Linguistic Igbo/Yoruba",
+        "Chinese",
+        "Philosophy",
+        "Christian Religious Studies",
+        "Islamic Religious Studies",
+    ],
+    "faculty of basic medical sciences": [
+        "Pharmacology",
+        "Physiology",
+        "Medical Laboratory Science",
+    ],
+    "faculty of clinical sciences": [
+        "Medicine and Surgery",
+        "Nursing",
+        "Physiotherapy",
+        "Radiography",
+    ],
+    "faculty of dental sciences": [
+        "Dentistry",
+    ],
+    "faculty of education": [
+        "Adult Education",
+        "Education Economics",
+        "Business Education",
+        "Education Islamic Religious Studies",
+        "Education Igbo",
+        "Education English",
+        "Early Childhood Education",
+        "Education Yoruba",
+        "Education French",
+        "Education History",
+        "Education Christian Religious Studies",
+        "Education Geography",
+        "Educational Administration",
+        "Educational Foundations",
+        "Health Education",
+        "Human Kinetics Education",
+        "Education Biology",
+        "Education Chemistry",
+        "Education Home Economics",
+        "Integrated Science Education",
+        "Education Mathematics",
+        "Education Physics",
+        "Technology Education",
+    ],
+    "faculty of engineering": [
+        "Biomedical Engineering",
+        "Chemical & Petroleum Engineering",
+        "Civil & Environmental Engineering",
+        "Computer Engineering",
+        "Electrical & Electronics Engineering",
+        "Mechanical Engineering",
+        "Metallurgical & Material Engineering",
+        "Surveying & Geoinformatics Engineering",
+        "Systems Engineering",
+    ],
+    "faculty of environmental sciences": [
+        "Architecture",
+        "Building",
+        "Estate Management",
+        "Quantity Surveying",
+        "Urban & Regional Planning",
+    ],
+    "faculty of law": [
+        "Law",
+    ],
+    "faculty of management sciences": [
+        "Accounting",
+        "Actuarial Science",
+        "Insurance",
+        "Business Administration",
+        "Finance",
+        "IRPM",
+    ],
+    "faculty of pharmacy": [
+        "Pharmacy",
+    ],
+    "faculty of science": [
+        "Botany",
+        "Cell Biology & Genetics",
+        "Chemistry",
+        "Computer Science",
+        "Geology",
+        "Geophysics",
+        "Marine Biology",
+        "Fisheries",
+        "Mathematics",
+        "Industrial Mathematics",
+        "Statistics",
+        "Microbiology",
+        "Physics",
+        "Zoology",
+    ],
+    "faculty of social sciences": [
+        "Economics",
+        "Geography",
+        "Mass Communication",
+        "Political Science",
+        "Psychology",
+        "Social Work",
+        "Sociology",
+    ],
 }
 
 def init_openai(config):
@@ -248,6 +360,30 @@ def _build_query_variants(query, history=None):
         if key in q_lower:
             for synonym in synonyms:
                 variants.append(q_lower.replace(key, synonym))
+
+    if "vice chancellor" in q_lower:
+        variants.extend([
+            "vice chancellor office",
+            "office of the vice chancellor",
+            "leadership officers dean",
+            "principal officers",
+            "vice chancellor university",
+        ])
+    if any(term in q_lower for term in ("academic year", "academic session", "school year", "session")):
+        variants.extend([
+            "academic calendar",
+            "academic session",
+            "semester dates",
+            "session dates",
+            "calendar",
+        ])
+    if any(term in q_lower for term in ("owner", "founder", "founded", "proprietor")):
+        variants.extend([
+            "about this university",
+            "university history",
+            "leadership",
+            "about university",
+        ])
 
     tokens = [t for t in re.split(r"\s+", q_lower) if t]
     for i, token in enumerate(tokens):
@@ -2194,6 +2330,44 @@ def _fallback_general_reply(query):
     )
 
 
+def _answer_uses_query_terms(answer, query):
+    q_tokens = {t for t in _tokenize(query) if t not in _STOP_WORDS}
+    if not answer or not q_tokens:
+        return False
+    generic = {
+        "university", "school", "campus", "student", "students", "help",
+        "information", "info", "please", "question", "questions", "thing",
+        "this", "thi", "the", "who", "whos", "what", "is", "it", "its",
+    }
+    q_tokens = {t for t in q_tokens if t not in generic}
+    if not q_tokens:
+        return False
+    a_tokens = set(_tokenize(answer))
+    return bool(q_tokens.intersection(a_tokens))
+
+
+def _catalog_reply(query):
+    q = (query or "").lower()
+    matches = []
+    for faculty, programs in _CATALOG_FACULTIES.items():
+        if faculty in q or ("faculty" in q and faculty.split("faculty of ", 1)[-1] in q):
+            matches.append((faculty, programs))
+
+    if not matches and any(word in q for word in ("list of faculty", "list of faculties", "what faculties", "departments in this school", "programmes in this school", "programs in this school", "course catalog", "course catalogue")):
+        matches = list(_CATALOG_FACULTIES.items())
+
+    if not matches:
+        return None
+
+    lines = ["This university currently offers programmes across these faculties:"]
+    for faculty, programs in matches[:4]:
+        lines.append(f"{faculty.title()}:")
+        lines.extend([f"- {p}" for p in programs[:8]])
+        lines.append("")
+    lines.append("If you want, I can narrow this to one faculty or department.")
+    return "\n".join(lines).strip()
+
+
 def _strip_markdown_text(text):
     lines = []
     for raw in (text or "").splitlines():
@@ -2248,6 +2422,9 @@ def _compose_local_response(query, items):
     ranked = sorted(items, key=_relevance_score, reverse=True)
     best = ranked[0]
     best_score = _relevance_score(best)
+
+    if best_score < 0.7:
+        return "", []
 
     if best_score <= 0 and len(ranked) > 1:
         for candidate in ranked[1:]:
@@ -2360,6 +2537,10 @@ What would you like to know about?"""
             welcome_msg = "Hello! 👋 Welcome to the University Information Assistant! How can I help you today?"
         
         return welcome_msg, []
+
+    catalog_answer = _catalog_reply(query)
+    if catalog_answer:
+        return catalog_answer, []
     
     search_items = search_kb_items(query, limit=8, history=history)
     context, sources = search_kb(query, limit=8, history=history)
@@ -2370,7 +2551,9 @@ What would you like to know about?"""
         admin_hint = "\n\n(Admin tip: add the official fees/tuition info in the Admin dashboard under FAQs or Policies.)"
 
     if not config['OPENAI_API_KEY'] or not client:
-        return (local_answer or _fallback_general_reply(query)) + admin_hint, local_sources
+        if local_answer and _answer_uses_query_terms(local_answer, query):
+            return local_answer + admin_hint, local_sources
+        return _fallback_general_reply(query) + admin_hint, local_sources
 
     conv_messages = []
     for turn in history[-6:]:
@@ -2396,7 +2579,7 @@ What would you like to know about?"""
         messages.extend(conv_messages)
         messages.append({
             "role": "user",
-            "content": f"Knowledge base context:\n{knowledge_context}\n\nQuestion: {query}\n\nAnswer:"
+            "content": f"Knowledge base context:\n{knowledge_context}\n\nQuestion: {query}\n\nAnswer the question directly."
         })
         response = client.chat.completions.create(
             model=CHAT_MODEL,
@@ -2420,7 +2603,7 @@ What would you like to know about?"""
         current_app.logger.error(f"AI error: {str(e)}")
         if _is_openai_capacity_error(e):
             client = None
-        if local_answer:
+        if local_answer and _answer_uses_query_terms(local_answer, query):
             return local_answer + admin_hint, local_sources
         return (
             _fallback_general_reply(query)
