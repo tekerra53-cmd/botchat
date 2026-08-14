@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Chat with UniBot{% endblock %}
+
+{% block content %}
+<div class="chat-wrapper">
+    <div class="chat-header">
+        <div class="header-content">
+            <div class="bot-avatar">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div class="bot-info">
+                <h5 class="bot-name">UniBot</h5>
+                <span class="bot-status">
+                    <i class="fas fa-circle text-success"></i> Online
+                </span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-sm btn-outline-light" id="clear-chat" title="Clear chat">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="chat-container" id="chat-container">
+        <div class="welcome-message">
+            <div class="welcome-avatar">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <div class="welcome-content">
+                <h4>Welcome to University Assistant! 🎓</h4>
+                <p>I'm here to help you with information about admissions, courses, fees, policies, and more. Feel free to ask me anything!</p>
+                <div class="quick-questions">
+                    <span class="quick-label">Quick questions:</span>
+                    <div class="quick-buttons">
+                        <button class="quick-btn" data-question="What are the admission requirements?">Admission Requirements</button>
+                        <button class="quick-btn" data-question="What are the tuition fees?">Tuition Fees</button>
+                        <button class="quick-btn" data-question="When is the application deadline?">Application Deadline</button>
+                        <button class="quick-btn" data-question="What scholarships are available?">Scholarships</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="chat-input-container">
+        <div class="input-wrapper">
+            <div class="input-group">
+                <input type="text" id="message-input" class="form-control chat-input"
+                       placeholder="Ask me anything about the university..." autocomplete="off">
+                <button class="btn btn-send" id="send-btn" disabled>
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+            <div class="input-footer">
+                <small class="text-muted">
+                    <i class="fas fa-shield-alt me-1"></i>Powered by AI • Press Enter to send
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+{% endblock %}

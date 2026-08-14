@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+
+{% block title %}System Logs{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <i class="fas fa-history"></i>
+            </div>
+            <div class="header-text">
+                <h1>System Logs</h1>
+                <p>Activity logs and system events</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-section">
+        <div class="filter-group">
+            <label for="action_filter">Action:</label>
+            <select id="action_filter" class="form-select">
+                <option value="">All Actions</option>
+                <option value="login">Login</option>
+                <option value="logout">Logout</option>
+                <option value="create">Create</option>
+                <option value="update">Update</option>
+                <option value="delete">Delete</option>
+                <option value="register">Register</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="resource_filter">Resource:</label>
+            <select id="resource_filter" class="form-select">
+                <option value="">All Resources</option>
+                <option value="user">User</option>
+                <option value="faq">FAQ</option>
+                <option value="policy">Policy</option>
+                <option value="document">Document</option>
+                <option value="calendar">Calendar</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="date_filter">Date Range:</label>
+            <select id="date_filter" class="form-select">
+                <option value="">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+            </select>
+        </div>
+        <button id="clear_filters" class="btn btn-outline-secondary">Clear Filters</button>
+    </div>
+
+    <!-- Logs Table -->
+    <div class="logs-table-container">
+        <table class="logs-table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Resource</th>
+                    <th>Details</th>
+                    <th>IP Address</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs.items %}
+                <tr class="log-row" data-action="{{ log.action }}" data-resource="{{ log.resource_type }}">
+                    <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>
+                        {% if log.user %}
+                            <span class="user-badge role-{{ log.user.role }}">{{ log.user.username }}</span>
+                        {% else %}
+                            <span class="text-muted">System</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="action-badge action-{{ log.action }}">
+                            <i class="fas fa-{{ action_icons.get(log.action, 'circle') }}"></i>
+                            {{ log.action.title() }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="resource-badge">{{ log.resource_type.title() }}</span>
+                    </td>
+                    <td class="details-cell">
+                        <div class="details-content">{{ log.details or 'N/A' }}</div>
+                    </td>
+                    <td><code>{{ log.ip_address or 'N/A' }}</code></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if logs.has_prev or logs.has_next %}
+    <nav aria-label="Logs pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if logs.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('view_logs', page=logs.prev_num) }}">Previous</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">Previous</span>
+            </li>
+            {% endif %}
+
+            {% for page_num in logs.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num == logs.page %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                    </li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('view_logs', page=page_num) }}">{{ page_num }}</a>
+                    </li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if logs.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('view_logs', page=logs.next_num) }}">Next</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">Next</span>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    <!-- Export Button -->
+    <div class="export-section">
+        <a href="{{ url_for('export_data') }}" class="btn btn-primary">
+            <i class="fas fa-download"></i> Export Logs
+        </a>
+    </div>
+</div>
+
+<style>
+.filters-section {
+    display: flex;
+    gap: 1rem;
+    align-items: end;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    min-width: 150px;
+}
+
+.filter-group label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: #4a5568;
+}
+
+.form-select {
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: white;
+}
+
+.logs-table-container {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.logs-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.logs-table thead th {
+    background: var(--primary-gradient);
+    color: white;
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+}
+
+.logs-table tbody td {
+    padding: 1rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.log-row:hover {
+    background: #f8fafc;
+}
+
+.user-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.role-admin {
+    background: #fed7d7;
+    color: #c53030;
+}
+
+.role-moderator {
+    background: #fef5e7;
+    color: #d69e2e;
+}
+
+.role-user {
+    background: #e6fffa;
+    color: #38a169;
+}
+
+.action-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.action-create {
+    background: #c6f6d5;
+    color: #22543d;
+}
+
+.action-update {
+    background: #bee3f8;
+    color: #2a4365;
+}
+
+.action-delete {
+    background: #fed7d7;
+    color: #c53030;
+}
+
+.action-login {
+    background: #e6fffa;
+    color: #234e52;
+}
+
+.action-logout {
+    background: #f7fafc;
+    color: #4a5568;
+}
+
+.action-register {
+    background: #fefcbf;
+    color: #744210;
+}
+
+.resource-badge {
+    padding: 0.25rem 0.5rem;
+    background: #edf2f7;
+    color: #4a5568;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.details-cell {
+    max-width: 300px;
+}
+
+.details-content {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.details-content:hover {
+    white-space: normal;
+    background: white;
+    position: absolute;
+    z-index: 1000;
+    padding: 0.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.export-section {
+    text-align: center;
+}
+
+.pagination .page-link {
+    color: var(--primary-color);
+}
+
+.pagination .page-item.active .page-link {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const actionFilter = document.getElementById('action_filter');
+    const resourceFilter = document.getElementById('resource_filter');
+    const dateFilter = document.getElementById('date_filter');
+    const clearFilters = document.getElementById('clear_filters');
+    const logRows = document.querySelectorAll('.log-row');
+
+    function filterLogs() {
+        const actionValue = actionFilter.value.toLowerCase();
+        const resourceValue = resourceFilter.value.toLowerCase();
+
+        logRows.forEach(row => {
+            const action = row.dataset.action.toLowerCase();
+            const resource = row.dataset.resource.toLowerCase();
+
+            const actionMatch = !actionValue || action === actionValue;
+            const resourceMatch = !resourceValue || resource === resourceValue;
+
+            row.style.display = actionMatch && resourceMatch ? '' : 'none';
+        });
+    }
+
+    actionFilter.addEventListener('change', filterLogs);
+    resourceFilter.addEventListener('change', filterLogs);
+
+    clearFilters.addEventListener('click', function() {
+        actionFilter.value = '';
+        resourceFilter.value = '';
+        dateFilter.value = '';
+        logRows.forEach(row => row.style.display = '');
+    });
+});
+</script>
+
+{% endblock %}

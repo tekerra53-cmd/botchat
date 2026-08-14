@@ -1,0 +1,1389 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <i class="fas fa-cog"></i>
+            </div>
+            <div class="header-text">
+                <h1>Admin Dashboard</h1>
+                <p>Manage knowledge, users, and system activity in one clean workspace.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <span class="header-pill"><i class="fas fa-database"></i> Knowledge Base</span>
+            <span class="header-pill"><i class="fas fa-shield-alt"></i> Admin</span>
+        </div>
+    </div>
+
+    {% if show_ai_warning and (not ai_available or ai_error) %}
+    <div class="alert alert-warning d-flex align-items-start justify-content-between" role="alert" id="ai-status-banner">
+        <div class="me-3">
+            <strong>AI quota limited — smart local matching is active.</strong>
+            <span id="ai-status-text">
+                {% if ai_error %}
+                    {{ ai_error }}
+                {% else %}
+                    OpenAI client is not initialized.
+                {% endif %}
+            </span>
+            <div class="small text-muted mt-1">Upload previews, semantic search, and FAQ generation may be unavailable until this is resolved.</div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm btn-outline-dark" id="retry-ai-btn">Retry AI</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="rebuild-index-btn">Rebuild Index</button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Admin Navigation Tabs -->
+    <div class="admin-tabs">
+        <a href="{{ url_for('admin') }}" class="tab-link active">
+            <i class="fas fa-pen-to-square"></i> Create & Overview
+        </a>
+        <a href="{{ url_for('admin_documents') }}" class="tab-link">
+            <i class="fas fa-file-alt"></i> Add Document
+        </a>
+        <a href="{{ url_for('admin_records') }}" class="tab-link">
+            <i class="fas fa-table"></i> Records
+        </a>
+        {% if current_user.is_admin() %}
+        <a href="{{ url_for('manage_users') }}" class="tab-link">
+            <i class="fas fa-users"></i> User Management
+        </a>
+        {% endif %}
+        <a href="{{ url_for('analytics') }}" class="tab-link">
+            <i class="fas fa-chart-bar"></i> Analytics
+        </a>
+        {% if current_user.is_admin() %}
+        <a href="{{ url_for('view_logs') }}" class="tab-link">
+            <i class="fas fa-history"></i> System Logs
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Breadcrumbs -->
+    <nav class="breadcrumbs">
+        <a href="{{ url_for('index') }}"><i class="fas fa-home"></i> Home</a>
+        <span class="separator"><i class="fas fa-chevron-right"></i></span>
+        <a href="{{ url_for('admin') }}"><i class="fas fa-cog"></i> Admin</a>
+        <span class="separator"><i class="fas fa-chevron-right"></i></span>
+        <span>Dashboard</span>
+    </nav>
+
+    <!-- Content Management Tab -->
+    <div id="content-tab" class="tab-content active">
+    <div class="quick-links">
+        <span>Quick links:</span>
+        <a href="#create-section">Create & Overview</a>
+        <a href="#document-section">Add Document</a>
+        <a href="#records-section">Recent Records</a>
+    </div>
+    <div class="admin-section">
+        <div class="section-head">
+            <div>
+                <h2>Knowledge Base Overview</h2>
+                <p>Quick snapshot of your current content inventory.</p>
+            </div>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-question-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>{{ faqs|length }}</h4>
+                    <p>FAQs</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-file-contract"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>{{ policies|length }}</h4>
+                    <p>Policies</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>{{ calendars|length }}</h4>
+                    <p>Events</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>{{ documents|length }}</h4>
+                    <p>Documents</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-section">
+        <div class="section-head" id="create-section">
+            <div>
+                <h2>Content Studio</h2>
+                <p>Create FAQs, policies, and events. Knowledge base overview is right here.</p>
+            </div>
+            <div class="section-actions">
+                <button class="btn btn-sm btn-outline-secondary" type="button" id="expand-all">Expand All</button>
+                <button class="btn btn-sm btn-outline-secondary" type="button" id="collapse-all">Collapse All</button>
+            </div>
+        </div>
+
+        <div class="admin-grid">
+        <!-- Add FAQ Card -->
+        <div class="admin-card doc-card">
+            <div class="card-header">
+                <i class="fas fa-question-circle card-icon"></i>
+                <h5>Add FAQ</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="action" value="add_faq">
+                    <div class="form-group">
+                        <label for="faq-question">Question</label>
+                        <input type="text" id="faq-question" name="question" class="form-control"
+                               placeholder="e.g., What are the admission requirements?" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="faq-category">Category</label>
+                        <select id="faq-category" name="category" class="form-select">
+                            <option value="general">General</option>
+                            <option value="admissions">Admissions</option>
+                            <option value="fees">Fees</option>
+                            <option value="registration">Registration</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="faq-answer">Answer</label>
+                        <textarea id="faq-answer" name="answer" class="form-control" rows="4"
+                                  placeholder="Provide a detailed answer..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-plus me-2"></i>Add FAQ
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Add Policy Card -->
+        <div class="admin-card">
+            <div class="card-header">
+                <i class="fas fa-file-contract card-icon"></i>
+                <h5>Add Policy</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="action" value="add_policy">
+                    <div class="form-group">
+                        <label for="policy-title">Title</label>
+                        <input type="text" id="policy-title" name="title" class="form-control"
+                               placeholder="e.g., Academic Integrity Policy" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="policy-category">Category</label>
+                        <select id="policy-category" name="category" class="form-select">
+                            <option value="policy">Policy</option>
+                            <option value="admissions">Admissions</option>
+                            <option value="academic">Academic</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="policy-content">Content</label>
+                        <textarea id="policy-content" name="content" class="form-control" rows="4"
+                                  placeholder="Policy details..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-info w-100">
+                        <i class="fas fa-plus me-2"></i>Add Policy
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Add Event Card -->
+        <div class="admin-card">
+            <div class="card-header">
+                <i class="fas fa-calendar-alt card-icon"></i>
+                <h5>Add Event</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="action" value="add_calendar">
+                    <div class="form-group">
+                        <label for="event-name">Event Name</label>
+                        <input type="text" id="event-name" name="event_name" class="form-control"
+                               placeholder="e.g., Spring Orientation" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label for="event-date">Date</label>
+                            <input type="date" id="event-date" name="event_date" class="form-control" required>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="event-desc">Description (Optional)</label>
+                            <input type="text" id="event-desc" name="description" class="form-control"
+                                   placeholder="Brief description">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100">
+                        <i class="fas fa-plus me-2"></i>Add Event
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Add Document Card -->
+        <div class="admin-card">
+            <div class="card-header">
+                <i class="fas fa-file-alt card-icon"></i>
+                <h5>Add Document</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="action" value="add_doc">
+                    <div class="form-group">
+                        <label for="doc-title">Title</label>
+                        <input type="text" id="doc-title" name="title" class="form-control"
+                               placeholder="e.g., Student Handbook 2024" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="doc-category">Category</label>
+                        <select id="doc-category" name="category" class="form-select">
+                            <option value="handbook">Handbook</option>
+                            <option value="general">General</option>
+                            <option value="academic">Academic</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="doc-content">Content (Optional if file uploaded)</label>
+                        <textarea id="doc-content" name="content" class="form-control" rows="4"
+                                  placeholder="Paste document content (optional if uploading a file)..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="doc-file">Upload File (.pdf, .docx, .txt)</label>
+                        <input type="file" id="doc-file" name="file" class="form-control" accept=".pdf,.docx,.txt">
+                    </div>
+                    <div class="form-group">
+                        <button type="button" id="preview-doc-btn" class="btn btn-outline-secondary w-100">
+                            Preview Extracted Text
+                        </button>
+                    </div>
+                    <div class="form-group">
+                        <label for="doc-preview">Preview (Read Only)</label>
+                        <textarea id="doc-preview" class="form-control" rows="6" readonly
+                                  placeholder="Upload a file, then click 'Preview Extracted Text'..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-check-label" for="generate-faqs">
+                            <input class="form-check-input" type="checkbox" id="generate-faqs" name="generate_faqs" value="1">
+                            Auto-generate FAQs from this document
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label for="faq-count">Number of FAQs</label>
+                        <input type="number" id="faq-count" name="faq_count" class="form-control"
+                               min="1" max="20" value="8">
+                    </div>
+                    <button type="submit" class="btn btn-secondary w-100">
+                        <i class="fas fa-plus me-2"></i>Add Document
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <div class="admin-section">
+        <div class="section-head" id="document-section">
+            <div>
+                <h2>Add Document</h2>
+                <p>Upload handbooks and long-form references for richer answers.</p>
+            </div>
+            <div class="section-actions">
+                <a href="#create-section" class="btn btn-sm btn-outline-secondary">Back to Create</a>
+                <a href="#records-section" class="btn btn-sm btn-outline-secondary">Go to Records</a>
+            </div>
+        </div>
+        <div class="admin-grid">
+        </div>
+    </div>
+
+    <!-- FAQs Table -->
+    {% if faqs %}
+    <div class="admin-section" id="records-section">
+        <div class="section-head section-head-inline">
+            <div>
+                <h2>Recent Records</h2>
+                <p>FAQs, policies, calendar items, and documents in one place.</p>
+            </div>
+            <div class="section-actions">
+                <a href="#faq-list" class="btn btn-sm btn-outline-secondary">FAQs</a>
+                <a href="#policy-list" class="btn btn-sm btn-outline-secondary">Policies</a>
+                <a href="#calendar-list" class="btn btn-sm btn-outline-secondary">Calendar</a>
+                <a href="#document-list" class="btn btn-sm btn-outline-secondary">Documents</a>
+            </div>
+        </div>
+        <div class="section-subnav">
+            <a href="#faq-list">Jump to FAQs</a>
+            <a href="#policy-list">Jump to Policies</a>
+            <a href="#calendar-list">Jump to Calendar</a>
+            <a href="#document-list">Jump to Documents</a>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if faqs %}
+    <div class="admin-section" id="faq-list">
+        <div class="section-head section-head-inline">
+            <div>
+                <h2>Recent FAQs</h2>
+                <p>Review and clean up the most recent entries.</p>
+            </div>
+            <div class="section-actions">
+                <button class="collapse-toggle" type="button" data-target="faq-section" aria-expanded="true">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+                <button id="bulkDeleteFAQ" class="btn btn-sm btn-danger" disabled>Bulk Delete Selected</button>
+            </div>
+        </div>
+        <div class="section-body" id="faq-section">
+        <div class="table-tools">
+            <div class="tool-group">
+                <i class="fas fa-search"></i>
+                <input type="text" id="faq-search" placeholder="Search FAQs...">
+            </div>
+            <div class="tool-group">
+                <i class="fas fa-filter"></i>
+                <select id="faq-category-filter">
+                    <option value="">All categories</option>
+                    {% set faq_ns = namespace(cats=[]) %}
+                    {% for f in faqs %}
+                        {% if f.category not in faq_ns.cats %}
+                            {% set faq_ns.cats = faq_ns.cats + [f.category] %}
+                        {% endif %}
+                    {% endfor %}
+                    {% for c in faq_ns.cats %}
+                        <option value="{{ c }}">{{ c|title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="data-table-container">
+        <div class="table-responsive">
+            <table class="table table-hover">
+<thead>
+                    <tr>
+                        <th><i class="fas fa-question-circle me-2"></i>Question</th>
+                        <th><i class="fas fa-tag me-2"></i>Category</th>
+                        <th><i class="fas fa-clock me-2"></i>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for faq in faqs %}
+                    <tr data-text="{{ (faq.question or '')|lower }} {{ (faq.answer or '')|lower }}" data-category="{{ faq.category }}">
+                        <td data-label="Question">{{ faq.question[:80] }}{% if faq.question|length > 80 %}...{% endif %}</td>
+                        <td data-label="Category">
+                            <span class="badge bg-primary">{{ faq.category|title }}</span>
+                        </td>
+                        <td data-label="Created">{{ faq.created_at.strftime('%b %d, %Y') }}</td>
+                        <td data-label="Actions" class="table-actions">
+            <input type="checkbox" class="bulk-select" data-type="faq" data-id="{{ faq.id }}">
+<form method="POST" class="delete-form">
+    <input type="hidden" name="action" value="delete_faq">
+    <input type="hidden" name="faq_id" value="{{ faq.id }}">
+    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this FAQ?')">
+        <i class="fas fa-trash"></i>
+    </button>
+</form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    </div>
+    </div>
+    {% endif %}
+
+<div class="admin-section" id="policy-list">
+  <div class="section-head section-head-inline">
+    <div>
+      <h2>Policies ({{ policies|length }})</h2>
+      <p>Structured rules and official information for users.</p>
+    </div>
+    <div class="section-actions">
+        <button class="collapse-toggle" type="button" data-target="policy-section" aria-expanded="true">
+            <i class="fas fa-chevron-up"></i>
+        </button>
+        <button id="bulkDeletePolicy" class="btn btn-sm btn-danger" disabled>Bulk Delete Selected</button>
+    </div>
+  </div>
+  <div class="section-body" id="policy-section">
+  <div class="table-tools">
+      <div class="tool-group">
+          <i class="fas fa-search"></i>
+          <input type="text" id="policy-search" placeholder="Search policies...">
+      </div>
+      <div class="tool-group">
+          <i class="fas fa-filter"></i>
+          <select id="policy-category-filter">
+              <option value="">All categories</option>
+              {% set pol_ns = namespace(cats=[]) %}
+              {% for p in policies %}
+                  {% if p.category not in pol_ns.cats %}
+                      {% set pol_ns.cats = pol_ns.cats + [p.category] %}
+                  {% endif %}
+              {% endfor %}
+              {% for c in pol_ns.cats %}
+                  <option value="{{ c }}">{{ c|title }}</option>
+              {% endfor %}
+          </select>
+      </div>
+  </div>
+<div class="table-responsive mb-4 data-table-container">
+  <table class="table table-striped">
+    <thead><tr><th>Title</th><th>Preview</th><th>Category</th><th>Actions</th></tr></thead>
+    <tbody>
+      {% for pol in policies %}
+      <tr data-text="{{ (pol.title or '')|lower }} {{ (pol.content or '')|lower }}" data-category="{{ pol.category }}">
+        <td data-label="Title">{{ pol.title[:50] }}...</td>
+        <td data-label="Preview">{{ pol.content[:100] }}...</td>
+        <td data-label="Category"><span class="badge bg-info">{{ pol.category }}</span></td>
+        <td data-label="Actions" class="table-actions">
+            <input type="checkbox" class="bulk-select" data-type="policy" data-id="{{ pol.id }}">
+<form method="POST" class="delete-form">
+    <input type="hidden" name="action" value="delete_policy">
+    <input type="hidden" name="policy_id" value="{{ pol.id }}">
+    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this Policy?')">
+        <i class="fas fa-trash"></i>
+    </button>
+</form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+</div>
+</div>
+
+<div class="admin-section" id="calendar-list">
+  <div class="section-head section-head-inline">
+    <div>
+      <h2>Calendar ({{ calendars|length }})</h2>
+      <p>Upcoming events and key dates.</p>
+    </div>
+    <div class="section-actions">
+        <button class="collapse-toggle" type="button" data-target="calendar-section" aria-expanded="true">
+            <i class="fas fa-chevron-up"></i>
+        </button>
+        <button id="bulkDeleteCalendar" class="btn btn-sm btn-danger" disabled>Bulk Delete Selected</button>
+    </div>
+  </div>
+  <div class="section-body" id="calendar-section">
+  <div class="table-tools">
+      <div class="tool-group">
+          <i class="fas fa-search"></i>
+          <input type="text" id="calendar-search" placeholder="Search events...">
+      </div>
+  </div>
+<div class="table-responsive mb-4 data-table-container">
+  <table class="table table-striped">
+    <thead><tr><th>Event</th><th>Date</th><th>Description</th><th>Actions</th></tr></thead>
+    <tbody>
+      {% for cal in calendars %}
+      <tr data-text="{{ (cal.event_name or '')|lower }} {{ (cal.description or '')|lower }}">
+        <td data-label="Event">{{ cal.event_name }}</td>
+        <td data-label="Date">{{ cal.event_date }}</td>
+        <td data-label="Description">{{ cal.description or ''[:50] }}...</td>
+        <td data-label="Actions" class="table-actions">
+            <button class="btn btn-sm btn-outline-danger delete-btn" data-id="{{ cal.id }}" data-type="calendar" title="Delete Event">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+</div>
+</div>
+
+<div class="admin-section" id="document-list">
+  <div class="section-head section-head-inline">
+    <div>
+      <h2>Documents ({{ documents|length }})</h2>
+      <p>Handbooks and uploaded reference materials.</p>
+    </div>
+    <div class="section-actions">
+        <button class="collapse-toggle" type="button" data-target="document-table-section" aria-expanded="true">
+            <i class="fas fa-chevron-up"></i>
+        </button>
+        <button id="bulkDeleteDocument" class="btn btn-sm btn-danger" disabled>Bulk Delete Selected</button>
+    </div>
+  </div>
+  <div class="section-body" id="document-table-section">
+  <div class="table-tools">
+      <div class="tool-group">
+          <i class="fas fa-search"></i>
+          <input type="text" id="document-search" placeholder="Search documents...">
+      </div>
+      <div class="tool-group">
+          <i class="fas fa-filter"></i>
+          <select id="document-category-filter">
+              <option value="">All categories</option>
+              {% set doc_ns = namespace(cats=[]) %}
+              {% for d in documents %}
+                  {% if d.category not in doc_ns.cats %}
+                      {% set doc_ns.cats = doc_ns.cats + [d.category] %}
+                  {% endif %}
+              {% endfor %}
+              {% for c in doc_ns.cats %}
+                  <option value="{{ c }}">{{ c|title }}</option>
+              {% endfor %}
+          </select>
+      </div>
+  </div>
+<div class="table-responsive data-table-container">
+  <table class="table table-striped">
+    <thead><tr><th>Title</th><th>Preview</th><th>Category</th><th>Actions</th></tr></thead>
+    <tbody>
+      {% for doc in documents %}
+      <tr data-text="{{ (doc.title or '')|lower }} {{ (doc.content or '')|lower }}" data-category="{{ doc.category }}">
+        <td data-label="Title">{{ doc.title[:50] }}...</td>
+        <td data-label="Preview">{{ doc.content[:100] }}...</td>
+        <td data-label="Category"><span class="badge bg-secondary">{{ doc.category }}</span></td>
+        <td data-label="Actions" class="table-actions">
+            <button class="btn btn-sm btn-outline-danger delete-btn" data-id="{{ doc.id }}" data-type="document" title="Delete Document">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+</div>
+</div>
+
+<p class="mt-3"><small>Refresh page after adds. Edit/Delete: Extend later. Data powers chatbot!</small></p>
+    </div> <!-- End content tab -->
+</div>
+</div> <!-- End admin container -->
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+.admin-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+    font-family: 'Space Grotesk', 'Manrope', 'Segoe UI', sans-serif;
+    --primary-color: #676f9d;
+    --primary-gradient: linear-gradient(135deg, #676f9d 0%, #424769 100%);
+    --accent-color: #676f9d;
+}
+
+.admin-container::before {
+    content: "";
+    position: absolute;
+    inset: -60px -40px auto -40px;
+    height: 320px;
+    background:
+        radial-gradient(circle at 10% 20%, rgba(103, 111, 157, 0.18), transparent 55%),
+        radial-gradient(circle at 90% 30%, rgba(66, 71, 105, 0.16), transparent 55%),
+        radial-gradient(circle at 50% 80%, rgba(45, 50, 80, 0.12), transparent 60%);
+    z-index: -1;
+    pointer-events: none;
+}
+
+.admin-header {
+    background: linear-gradient(135deg, rgba(103, 111, 157, 0.98), rgba(66, 71, 105, 0.96));
+    color: white;
+    border-radius: 18px;
+    padding: 1.75rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    box-shadow: 0 24px 40px rgba(15, 23, 42, 0.18);
+    margin-bottom: 1.75rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.header-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: #fff;
+    border-radius: 999px;
+    padding: 0.35rem 0.8rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+.admin-tabs {
+    display: inline-flex;
+    gap: 0.5rem;
+    background: rgba(255,255,255,0.7);
+    border-radius: 999px;
+    padding: 0.4rem;
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+    margin-bottom: 1.5rem;
+    backdrop-filter: blur(14px);
+}
+
+.quick-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+    margin: 0 0 1.25rem 0;
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.quick-links a {
+    text-decoration: none;
+    color: #676f9d;
+    background: #eef0f7;
+    border: 1px solid rgba(103, 111, 157, 0.25);
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    font-weight: 600;
+}
+
+.section-subnav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.section-subnav a {
+    text-decoration: none;
+    color: #676f9d;
+    font-size: 0.8rem;
+    background: #f2f3f8;
+    border: 1px solid #d8dbea;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+}
+
+.tab-link {
+    flex: 0 0 auto;
+    padding: 0.7rem 1.2rem;
+    text-decoration: none;
+    color: #4a5568;
+    text-align: center;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    border-radius: 999px;
+}
+
+.tab-link:hover {
+    background: #eef0f7;
+    color: var(--primary-color);
+}
+
+.tab-link.active {
+    background: var(--primary-gradient);
+    color: white;
+    border-bottom-color: transparent;
+    box-shadow: 0 10px 20px rgba(103, 111, 157, 0.3);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.admin-section {
+    background: rgba(255,255,255,0.92);
+    border-radius: 18px;
+    padding: 1.5rem;
+    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    backdrop-filter: blur(10px);
+}
+
+.admin-section + .admin-section {
+    margin-top: 1rem;
+}
+
+.admin-section.compact {
+    padding: 1.25rem;
+}
+
+.admin-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 1.5rem;
+}
+
+.admin-main {
+    min-width: 0;
+}
+
+.admin-aside {
+    position: sticky;
+    top: 1.25rem;
+    align-self: start;
+}
+
+.section-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.section-head h2 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #2d3748;
+}
+
+.section-head p {
+    margin: 0;
+    color: #718096;
+    font-size: 0.9rem;
+}
+
+.section-head-inline {
+    align-items: center;
+}
+
+.section-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.collapse-toggle {
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    border-radius: 10px;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.collapse-toggle:hover {
+    background: #eef0f7;
+}
+
+.collapse-toggle.is-collapsed i {
+    transform: rotate(180deg);
+}
+
+.section-body {
+    transition: max-height 0.25s ease, opacity 0.2s ease;
+}
+
+.section-body.is-collapsed {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.table-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.tool-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f1f5f9;
+}
+
+.tool-group input,
+.tool-group select {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 0.85rem;
+    min-width: 140px;
+}
+
+.tool-group i {
+    color: #94a3b8;
+}
+
+.admin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.25rem;
+}
+
+.admin-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: none;
+    overflow: hidden;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.admin-card .card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: #f1f5f9;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0.9rem 1rem;
+}
+
+.admin-card .card-body {
+    padding: 1rem;
+}
+
+.admin-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 18px 30px rgba(15, 23, 42, 0.12);
+}
+
+.doc-card .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.doc-card .form-row .form-group {
+    margin-bottom: 0;
+}
+
+.data-table-container {
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    overflow: hidden;
+    background: white;
+}
+
+.data-table-container .table {
+    margin: 0;
+}
+
+.data-table-container .table thead th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0.7rem 0.9rem;
+}
+
+.data-table-container .table tbody td {
+    padding: 0.7rem 0.9rem;
+    vertical-align: middle;
+    font-size: 0.9rem;
+}
+
+.data-table-container .table tbody tr {
+    transition: background 0.2s ease;
+}
+
+.data-table-container .table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.table-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.table-actions .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.stat-card {
+    background: #f8fafc;
+    border-radius: 14px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border: 1px solid #edf2f7;
+}
+
+.stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--primary-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.stat-content h4 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.stat-content p {
+    margin: 0;
+    color: #718096;
+    font-size: 0.85rem;
+}
+
+.activity-list {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.activity-item {
+    display: flex;
+    gap: 0.7rem;
+    padding: 0.65rem;
+    border: 1px solid #edf2f7;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.activity-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--primary-gradient);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+}
+
+.activity-title {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #2d3748;
+}
+
+.activity-meta {
+    font-size: 0.75rem;
+    color: #718096;
+}
+
+.activity-empty {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    text-align: center;
+    padding: 1rem 0;
+}
+
+@media (max-width: 1024px) {
+    .admin-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-aside {
+        position: static;
+        order: 2;
+    }
+}
+
+@media (max-width: 900px) {
+    .admin-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .data-table-container .table thead {
+        display: none;
+    }
+
+    .data-table-container .table,
+    .data-table-container .table tbody,
+    .data-table-container .table tr,
+    .data-table-container .table td {
+        display: block;
+        width: 100%;
+    }
+
+    .data-table-container .table tr {
+        border-bottom: 1px solid #e2e8f0;
+        padding: 0.6rem 0;
+    }
+
+    .data-table-container .table tbody td {
+        padding: 0.45rem 0.9rem;
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .data-table-container .table tbody td::before {
+        content: attr(data-label);
+        color: #64748b;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    .table-actions {
+        justify-content: flex-end;
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .admin-tabs {
+        display: flex;
+        flex-direction: column;
+        border-radius: 16px;
+        padding: 0.4rem;
+    }
+    
+    .tab-link {
+        padding: 0.75rem 1rem;
+    }
+
+    .section-head {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .admin-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-aside {
+        position: static;
+        order: 2;
+    }
+
+    .section-actions {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .table-tools {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .tool-group {
+        width: 100%;
+    }
+
+    .doc-card .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tabLinks = document.querySelectorAll('.tab-link');
+    
+    tabLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            // If it's an external link (has href with url_for), let it navigate
+            if (this.getAttribute('href') && this.getAttribute('href') !== '#content') {
+                return;
+            }
+            
+            e.preventDefault();
+            
+            // Remove active class from all tabs
+            tabLinks.forEach(tab => tab.classList.remove('active'));
+            
+            // Add active class to clicked tab
+            this.classList.add('active');
+            
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Show the corresponding tab content
+            const tabId = this.getAttribute('data-tab');
+            const tabContent = document.getElementById(tabId + '-tab');
+            if (tabContent) {
+                tabContent.classList.add('active');
+            }
+        });
+    });
+
+    const previewBtn = document.getElementById('preview-doc-btn');
+    const fileInput = document.getElementById('doc-file');
+    const previewBox = document.getElementById('doc-preview');
+    if (previewBtn && fileInput && previewBox) {
+        previewBtn.addEventListener('click', async function() {
+            if (!fileInput.files || fileInput.files.length === 0) {
+                previewBox.value = 'Please select a file first.';
+                return;
+            }
+            previewBox.value = 'Extracting text...';
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            try {
+                const response = await fetch('{{ url_for("preview_doc") }}', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    previewBox.value = data.error || 'Preview failed.';
+                    return;
+                }
+                previewBox.value = data.preview || '(No text extracted)';
+            } catch (err) {
+                previewBox.value = 'Preview failed. Please try again.';
+            }
+        });
+    }
+
+    const retryBtn = document.getElementById('retry-ai-btn');
+    const aiBanner = document.getElementById('ai-status-banner');
+    const aiStatusText = document.getElementById('ai-status-text');
+    if (retryBtn && aiBanner && aiStatusText) {
+        retryBtn.addEventListener('click', async function() {
+            retryBtn.disabled = true;
+            retryBtn.textContent = 'Retrying...';
+            try {
+                const response = await fetch('{{ url_for("retry_ai") }}', { method: 'POST' });
+                const data = await response.json();
+                if (data.ai_available && !data.ai_error) {
+                    aiBanner.remove();
+                } else {
+                    aiStatusText.textContent = data.ai_error || 'OpenAI client is not initialized.';
+                }
+            } catch (err) {
+                aiStatusText.textContent = 'Retry failed. Please check your network or API key.';
+            } finally {
+                if (retryBtn) {
+                    retryBtn.disabled = false;
+                    retryBtn.textContent = 'Retry AI';
+                }
+            }
+        });
+    }
+
+    const rebuildBtn = document.getElementById('rebuild-index-btn');
+    if (rebuildBtn && aiStatusText) {
+        rebuildBtn.addEventListener('click', async function() {
+            rebuildBtn.disabled = true;
+            rebuildBtn.textContent = 'Rebuilding...';
+            try {
+                const response = await fetch('{{ url_for("rebuild_index") }}', { method: 'POST' });
+                const data = await response.json();
+                if (data.success) {
+                    aiStatusText.textContent = 'Local index rebuilt successfully.';
+                } else {
+                    aiStatusText.textContent = data.error || 'Index rebuild failed.';
+                }
+            } catch (err) {
+                aiStatusText.textContent = 'Index rebuild failed.';
+            } finally {
+                rebuildBtn.disabled = false;
+                rebuildBtn.textContent = 'Rebuild Index';
+            }
+        });
+    }
+
+    // Delete functionality (fixed field names for backend)
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const itemId = this.dataset.id;
+            const itemType = this.dataset.type;
+            
+            // Clear previous fields
+            const form = document.getElementById('deleteForm');
+            form.innerHTML = '<input type="hidden" name="action" id="deleteAction">';
+            
+            // Set action and type-specific ID field
+            document.getElementById('deleteAction').value = `delete_${itemType}`;
+            form.insertAdjacentHTML('beforeend', `<input type="hidden" name="${itemType}_id" value="${itemId}">`);
+            
+            document.getElementById('deleteItemType').textContent = itemType.toUpperCase();
+            document.getElementById('deleteModalTitle').textContent = `Delete ${itemType.charAt(0).toUpperCase() + itemType.slice(1)}`;
+            
+            const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            modal.show();
+        });
+    }
+
+    // Bulk delete functionality
+    document.querySelectorAll('.bulk-select').forEach(cb => {
+        cb.addEventListener('change', updateBulkButtons);
+    });
+
+    function updateBulkButtons() {
+        const selected = document.querySelectorAll('.bulk-select:checked');
+        const buttons = document.querySelectorAll('[id^="bulkDelete"]');
+        buttons.forEach(btn => btn.disabled = selected.length === 0);
+    }
+
+    document.querySelectorAll('[id^="bulkDelete"]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const type = this.id.replace('bulkDelete', '');
+            const selected = Array.from(document.querySelectorAll(`.bulk-select[data-type="${type}"]:checked`)).map(cb => cb.dataset.id);
+            if (selected.length === 0) return;
+
+            // Clear form
+            const form = document.getElementById('deleteForm');
+            form.innerHTML = '<input type="hidden" name="action" id="deleteAction">';
+            
+            document.getElementById('deleteAction').value = `bulk_delete_${type}`;
+            form.insertAdjacentHTML('beforeend', `<input type="hidden" name="${type}_ids" value='${JSON.stringify(selected)}'>`);
+            document.getElementById('deleteItemType').textContent = `${selected.length} ${type.toUpperCase()}`;
+            document.getElementById('deleteModalTitle').textContent = `Delete ${selected.length} Selected ${type.toUpperCase()}`;
+
+            const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            modal.show();
+        });
+    });
+
+    // Collapsible sections
+    document.querySelectorAll('.collapse-toggle').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const targetId = this.dataset.target;
+            const section = document.getElementById(targetId);
+            if (!section) return;
+            const isCollapsed = section.classList.toggle('is-collapsed');
+            this.classList.toggle('is-collapsed', isCollapsed);
+            this.setAttribute('aria-expanded', String(!isCollapsed));
+        });
+    });
+
+    function setAllSections(collapsed) {
+        document.querySelectorAll('.section-body').forEach(section => {
+            section.classList.toggle('is-collapsed', collapsed);
+        });
+        document.querySelectorAll('.collapse-toggle').forEach(btn => {
+            btn.classList.toggle('is-collapsed', collapsed);
+            btn.setAttribute('aria-expanded', String(!collapsed));
+        });
+    }
+
+    const expandAllBtn = document.getElementById('expand-all');
+    const collapseAllBtn = document.getElementById('collapse-all');
+    if (expandAllBtn) {
+        expandAllBtn.addEventListener('click', () => setAllSections(false));
+    }
+    if (collapseAllBtn) {
+        collapseAllBtn.addEventListener('click', () => setAllSections(true));
+    }
+
+    // Table search + filter
+    function filterRows(searchInputId, categorySelectId, tableSelector) {
+        const searchEl = document.getElementById(searchInputId);
+        const categoryEl = document.getElementById(categorySelectId);
+        const table = document.querySelector(tableSelector);
+        if (!searchEl || !table) return;
+
+        const term = (searchEl.value || '').toLowerCase().trim();
+        const category = categoryEl ? (categoryEl.value || '').toLowerCase() : '';
+
+        table.querySelectorAll('tbody tr').forEach(row => {
+            const text = (row.dataset.text || '').toLowerCase();
+            const rowCat = (row.dataset.category || '').toLowerCase();
+            const matchesText = term === '' || text.includes(term);
+            const matchesCat = category === '' || rowCat === category;
+            row.style.display = (matchesText && matchesCat) ? '' : 'none';
+        });
+    }
+
+    const filters = [
+        { search: 'faq-search', category: 'faq-category-filter', table: '#faq-section table' },
+        { search: 'policy-search', category: 'policy-category-filter', table: '#policy-section table' },
+        { search: 'calendar-search', category: null, table: '#calendar-section table' },
+        { search: 'document-search', category: 'document-category-filter', table: '#document-table-section table' },
+    ];
+
+    filters.forEach(cfg => {
+        const searchEl = document.getElementById(cfg.search);
+        const categoryEl = cfg.category ? document.getElementById(cfg.category) : null;
+        if (searchEl) {
+            searchEl.addEventListener('input', () => filterRows(cfg.search, cfg.category, cfg.table));
+        }
+        if (categoryEl) {
+            categoryEl.addEventListener('change', () => filterRows(cfg.search, cfg.category, cfg.table));
+        }
+    });
+});
+</script>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalTitle">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this <span id="deleteItemType"></span>?</p>
+                <p class="text-danger"><strong>This action cannot be undone.</strong></p>
+                <form method="POST" id="deleteForm">
+                    <input type="hidden" name="action" id="deleteAction">
+
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="deleteForm" class="btn btn-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

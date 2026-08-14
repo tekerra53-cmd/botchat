@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Documents{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <i class="fas fa-file-alt"></i>
+            </div>
+            <div class="header-text">
+                <h1>Add Document</h1>
+                <p>Upload handbooks and long-form references for richer answers.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <span class="header-pill"><i class="fas fa-database"></i> Knowledge Base</span>
+            <span class="header-pill"><i class="fas fa-shield-alt"></i> Admin</span>
+        </div>
+    </div>
+
+    {% if show_ai_warning and (not ai_available or ai_error) %}
+    <div class="alert alert-warning d-flex align-items-start justify-content-between" role="alert" id="ai-status-banner">
+        <div class="me-3">
+            <strong>AI quota limited — smart local matching is active.</strong>
+            <span id="ai-status-text">
+                {% if ai_error %}
+                    {{ ai_error }}
+                {% else %}
+                    OpenAI client is not initialized.
+                {% endif %}
+            </span>
+            <div class="small text-muted mt-1">Upload previews, semantic search, and FAQ generation may be unavailable until this is resolved.</div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm btn-outline-dark" id="retry-ai-btn">Retry AI</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="rebuild-index-btn">Rebuild Index</button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="admin-tabs">
+        <a href="{{ url_for('admin') }}" class="tab-link">
+            <i class="fas fa-pen-to-square"></i> Create & Overview
+        </a>
+        <a href="{{ url_for('admin_documents') }}" class="tab-link active">
+            <i class="fas fa-file-alt"></i> Add Document
+        </a>
+        <a href="{{ url_for('admin_records') }}" class="tab-link">
+            <i class="fas fa-table"></i> Records
+        </a>
+        {% if current_user.is_admin() %}
+        <a href="{{ url_for('manage_users') }}" class="tab-link">
+            <i class="fas fa-users"></i> User Management
+        </a>
+        {% endif %}
+        <a href="{{ url_for('analytics') }}" class="tab-link">
+            <i class="fas fa-chart-bar"></i> Analytics
+        </a>
+        {% if current_user.is_admin() %}
+        <a href="{{ url_for('view_logs') }}" class="tab-link">
+            <i class="fas fa-history"></i> System Logs
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Breadcrumbs -->
+    <nav class="breadcrumbs">
+        <a href="{{ url_for('index') }}"><i class="fas fa-home"></i> Home</a>
+        <span class="separator"><i class="fas fa-chevron-right"></i></span>
+        <a href="{{ url_for('admin') }}"><i class="fas fa-cog"></i> Admin</a>
+        <span class="separator"><i class="fas fa-chevron-right"></i></span>
+        <span>Documents</span>
+    </nav>
+
+    <div class="quick-links">
+        <span>Quick links:</span>
+        <a href="{{ url_for('admin') }}">Back to Create</a>
+        <a href="{{ url_for('admin') }}">Create & Overview</a>
+        <a href="{{ url_for('admin_records') }}">Recent Records</a>
+    </div>
+
+    <div class="admin-section">
+        <div class="section-head">
+            <div>
+                <h2>Document Upload</h2>
+                <p>Add long-form documents and optionally generate FAQs automatically.</p>
+            </div>
+        </div>
+        <div class="admin-grid">
+            <div class="admin-card doc-card">
+                <div class="card-header">
+                    <i class="fas fa-file-alt card-icon"></i>
+                    <h5>Add Document</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin') }}">
+                        <input type="hidden" name="action" value="add_doc">
+                        <div class="form-group">
+                            <label for="doc-title">Title</label>
+                            <input type="text" id="doc-title" name="title" class="form-control"
+                                   placeholder="e.g., Student Handbook 2024" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="doc-category">Category</label>
+                            <select id="doc-category" name="category" class="form-select">
+                                <option value="handbook">Handbook</option>
+                                <option value="general">General</option>
+                                <option value="academic">Academic</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="doc-content">Content (Optional if file uploaded)</label>
+                            <textarea id="doc-content" name="content" class="form-control" rows="4"
+                                      placeholder="Paste document content (optional if uploading a file)..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="doc-file">Upload File (.pdf, .docx, .txt)</label>
+                            <input type="file" id="doc-file" name="file" class="form-control" accept=".pdf,.docx,.txt">
+                        </div>
+                        <div class="form-group">
+                            <button type="button" id="preview-doc-btn" class="btn btn-outline-secondary w-100">
+                                Preview Extracted Text
+                            </button>
+                        </div>
+                        <div class="form-group">
+                            <label for="doc-preview">Preview (Read Only)</label>
+                            <textarea id="doc-preview" class="form-control" rows="6" readonly
+                                      placeholder="Upload a file, then click 'Preview Extracted Text'..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-check-label" for="generate-faqs">
+                                <input class="form-check-input" type="checkbox" id="generate-faqs" name="generate_faqs" value="1">
+                                Auto-generate FAQs from this document
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label for="faq-count">Number of FAQs</label>
+                            <input type="number" id="faq-count" name="faq_count" class="form-control"
+                                   min="1" max="20" value="8">
+                        </div>
+                        <button type="submit" class="btn btn-secondary w-100">
+                            <i class="fas fa-plus me-2"></i>Add Document
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "admin_styles_and_scripts.html" %}
+{% endblock %}

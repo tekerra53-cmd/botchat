@@ -1,0 +1,414 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics Dashboard{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <div class="header-text">
+                <h1>Analytics Dashboard</h1>
+                <p>Chat usage statistics and content performance</p>
+            </div>
+            <div class="header-actions">
+                <a href="{{ url_for('admin_export_analytics') }}" class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-download me-1"></i> Export CSV
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-tabs">
+        <a href="{{ url_for('admin') }}" class="tab-link">
+            <i class="fas fa-pen-to-square"></i> Create & Overview
+        </a>
+        <a href="{{ url_for('admin_documents') }}" class="tab-link">
+            <i class="fas fa-file-alt"></i> Add Document
+        </a>
+        <a href="{{ url_for('admin_records') }}" class="tab-link">
+            <i class="fas fa-table"></i> Records
+        </a>
+        {% if current_user.is_admin() %}
+        <a href="{{ url_for('manage_users') }}" class="tab-link">
+            <i class="fas fa-users"></i> User Management
+        </a>
+        {% endif %}
+        <a href="{{ url_for('analytics') }}" class="tab-link active">
+            <i class="fas fa-chart-bar"></i> Analytics
+        </a>
+        {% if current_user.is_admin() %}
+        <a href="{{ url_for('view_logs') }}" class="tab-link">
+            <i class="fas fa-history"></i> System Logs
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Breadcrumbs -->
+    <nav class="breadcrumbs">
+        <a href="{{ url_for('index') }}"><i class="fas fa-home"></i> Home</a>
+        <span class="separator"><i class="fas fa-chevron-right"></i></span>
+        <a href="{{ url_for('admin') }}"><i class="fas fa-cog"></i> Admin</a>
+        <span class="separator"><i class="fas fa-chevron-right"></i></span>
+        <span>Analytics</span>
+    </nav>
+
+    {% include "admin_styles_and_scripts.html" %}
+
+    <!-- Key Metrics -->
+    <div class="stats-overview">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-comments"></i>
+            </div>
+            <div class="stat-content">
+                <h3>{{ total_sessions }}</h3>
+                <p>Total Chat Sessions</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-envelope"></i>
+            </div>
+            <div class="stat-content">
+                <h3>{{ total_messages }}</h3>
+                <p>Total Messages</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-star"></i>
+            </div>
+            <div class="stat-content">
+                <h3>{{ avg_rating }}</h3>
+                <p>Average Rating</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-content">
+                <h3>{{ recent_sessions }}</h3>
+                <p>Sessions (30 days)</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Analytics -->
+    <div class="analytics-grid">
+        <!-- Chat Statistics -->
+        <div class="analytics-card">
+            <div class="card-header">
+                <i class="fas fa-chart-line card-icon"></i>
+                <h5>Chat Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="metric-item">
+                    <span class="metric-label">User Messages:</span>
+                    <span class="metric-value">{{ user_messages }}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Bot Responses:</span>
+                    <span class="metric-value">{{ bot_messages }}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Feedback Submissions:</span>
+                    <span class="metric-value">{{ feedback_count }}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Recent Feedback (30 days):</span>
+                    <span class="metric-value">{{ recent_feedback }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Performance -->
+        <div class="analytics-card">
+            <div class="card-header">
+                <i class="fas fa-eye card-icon"></i>
+                <h5>Content Performance</h5>
+            </div>
+            <div class="card-body">
+                <div class="metric-item">
+                    <span class="metric-label">FAQ Views:</span>
+                    <span class="metric-value">{{ faq_views }}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Policy Views:</span>
+                    <span class="metric-value">{{ policy_views }}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Document Downloads:</span>
+                    <span class="metric-value">{{ doc_downloads }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popular FAQs -->
+    {% if popular_faqs %}
+    <div class="analytics-card">
+        <div class="card-header">
+            <i class="fas fa-fire card-icon"></i>
+            <h5>Most Viewed FAQs</h5>
+        </div>
+        <div class="card-body">
+            <div class="popular-list">
+                {% for faq in popular_faqs %}
+                <div class="popular-item">
+                    <div class="popular-content">
+                        <h6>{{ faq.question[:60] }}{% if faq.question|length > 60 %}...{% endif %}</h6>
+                        <small class="text-muted">{{ faq.view_count }} views</small>
+                    </div>
+                    <div class="popular-badge">
+                        <span class="badge bg-primary">{{ faq.category|title }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="activity-grid">
+        <!-- Activity Overview Chart -->
+        <div class="analytics-card">
+            <div class="card-header">
+                <i class="fas fa-calendar-alt card-icon"></i>
+                <h5>Activity Overview</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="activityChart" height="140"></canvas>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="analytics-card">
+            <div class="card-header">
+                <i class="fas fa-history card-icon"></i>
+                <h5>Recent Activity</h5>
+            </div>
+            <div class="card-body">
+                <div class="activity-list">
+                    {% if recent_logs %}
+                        {% for log in recent_logs %}
+                        <div class="activity-item">
+                            <div class="activity-content">
+                                <div class="activity-title">{{ log.action|title }} {{ log.resource_type|title }}</div>
+                                <div class="activity-meta">
+                                    {{ log.created_at.strftime('%b %d, %Y %H:%M') }}
+                                    {% if log.user %} &bull; {{ log.user.username }}{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="activity-empty">No recent activity yet.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.analytics-card {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+}
+
+.analytics-card .card-header {
+    background: var(--primary-gradient);
+    color: white;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.analytics-card .card-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+}
+
+.analytics-card .card-body {
+    padding: 1.5rem;
+}
+
+.metric-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.metric-item:last-child {
+    border-bottom: none;
+}
+
+.metric-label {
+    font-weight: 500;
+    color: #4a5568;
+}
+
+.metric-value {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 1.1rem;
+}
+
+.popular-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.popular-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+}
+
+.popular-content h6 {
+    margin: 0 0 0.25rem 0;
+    color: #2d3748;
+}
+
+.popular-content small {
+    color: #718096;
+}
+
+.chart-placeholder {
+    text-align: center;
+    padding: 3rem;
+    color: #a0aec0;
+}
+
+.chart-placeholder i {
+    opacity: 0.5;
+}
+
+.activity-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.activity-list {
+    display: grid;
+    gap: 0.8rem;
+}
+
+.activity-item {
+    background: #f8fafc;
+    border: 1px solid #edf2f7;
+    border-radius: 10px;
+    padding: 0.75rem;
+}
+
+.activity-title {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 0.9rem;
+}
+
+.activity-meta {
+    font-size: 0.75rem;
+    color: #718096;
+}
+
+.activity-empty {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    text-align: center;
+    padding: 1rem 0;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const activityLabels = {{ activity_labels | tojson }};
+const sessionSeries = {{ session_series | tojson }};
+const messageSeries = {{ message_series | tojson }};
+const feedbackSeries = {{ feedback_series | tojson }};
+
+const chartEl = document.getElementById('activityChart');
+if (chartEl) {
+  const ctx = chartEl.getContext('2d');
+  const hasData = sessionSeries.some(v => v > 0) || messageSeries.some(v => v > 0) || feedbackSeries.some(v => v > 0);
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: activityLabels,
+      datasets: [
+        {
+          label: 'Sessions',
+          data: sessionSeries,
+          borderColor: '#676f9d',
+          backgroundColor: 'rgba(103, 111, 157, 0.18)',
+          tension: 0.3,
+          fill: true,
+        },
+        {
+          label: 'Messages',
+          data: messageSeries,
+          borderColor: '#424769',
+          backgroundColor: 'rgba(66, 71, 105, 0.16)',
+          tension: 0.3,
+          fill: true,
+        },
+        {
+          label: 'Feedback',
+          data: feedbackSeries,
+          borderColor: '#2d3250',
+          backgroundColor: 'rgba(45, 50, 80, 0.12)',
+          tension: 0.3,
+          fill: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: { mode: 'index', intersect: false },
+      },
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        y: { beginAtZero: true, ticks: { precision: 0 } },
+      },
+    },
+  });
+
+  if (!hasData) {
+    const emptyNote = document.createElement('div');
+    emptyNote.className = 'text-muted mt-3';
+    emptyNote.textContent = 'No recent activity yet. This chart will populate as chats and feedback are recorded.';
+    chartEl.parentElement.appendChild(emptyNote);
+  }
+}
+</script>
+{% endblock %}
+

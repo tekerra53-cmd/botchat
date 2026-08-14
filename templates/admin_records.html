@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Records{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-header">
+        <div class="header-content">
+            <div class="header-icon">
+                <i class="fas fa-table"></i>
+            </div>
+            <div class="header-text">
+                <h1>Recent Records</h1>
+                <p>Review FAQs, policies, calendar items, and documents in one place.</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <span class="header-pill"><i class="fas fa-database"></i> Knowledge Base</span>
+            <span class="header-pill"><i class="fas fa-shield-alt"></i> Admin</span>
+        </div>
+    </div>
+
+    {% if show_ai_warning and (not ai_available or ai_error) %}
+    <div class="alert alert-warning d-flex align-items-start justify-content-between" role="alert" id="ai-status-banner">
+        <div class="me-3">
+            <strong>AI quota limited — smart local matching is active.</strong>
+            <span id="ai-status-text">
+                {% if ai_error %}
+                    {{ ai_error }}
+                {% else %}
+                    OpenAI client is not initialized.
+                {% endif %}
+            </span>
+            <div class="small text-muted mt-1">Upload previews, semantic search, and FAQ generation may be unavailable until this is resolved.</div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm btn-outline-dark" id="retry-ai-btn">Retry AI</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="rebuild-index-btn">Rebuild Index</button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="admin-tabs">
+        <a href="{{ url_for('admin') }}" class="tab-link">
+            <i class="fas fa-pen-to-square"></i> Create & Overview
+        </a>
+        <a href="{{ url_for('admin_documents') }}" class="tab-link">
+            <i class="fas fa-file-alt"></i> Add Document
+        </a>
+        <a href="{{ url_for('admin_records') }}" class="tab-link active">
+            <i class="fas fa-table"></i> Records
+        </a>
+        {% if current_user.is_admin() %}
+        <a href="{{ url_for('manage_users') }}" class="tab-link">
+            <i class="fas fa-users"></i> User Management
+        </a>
+        {% endif %}
+        <a href="{{ url_for('analytics') }}" class="tab-link">
+            <i class="fas fa-chart-bar"></i> Analytics
+        </a>
+        {% if current_user.is_admin() %}
+        <a href="{{ url_for('view_logs') }}" class="tab-link">
+            <i class="fas fa-history"></i> System Logs
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Breadcrumbs -->
+    <nav class="breadcrumbs">
+        <a href="{{ url_for('index') }}"><i class="fas fa-home"></i> Home</a>
+        <span class="separator"><i class="fas fa-chevron-right"></i></span>
+        <a href="{{ url_for('admin') }}"><i class="fas fa-cog"></i> Admin</a>
+        <span class="separator"><i class="fas fa-chevron-right"></i></span>
+        <span>Records</span>
+    </nav>
+
+    <div class="quick-links">
+        <span>Quick links:</span>
+        <a href="{{ url_for('admin') }}">Back to Create</a>
+        <a href="{{ url_for('admin') }}">Create & Overview</a>
+        <a href="{{ url_for('admin_documents') }}">Add Document</a>
+    </div>
+
+    {% if faqs %}
+    <div class="admin-section">
+        <div class="section-head section-head-inline">
+            <div>
+                <h2>Recent FAQs</h2>
+                <p>Review and clean up the most recent entries.</p>
+            </div>
+            <div class="section-actions">
+                <button class="collapse-toggle" type="button" data-target="faq-section" aria-expanded="true">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+                <button id="bulkDeleteFAQ" class="btn btn-sm btn-danger" disabled>Bulk Delete Selected</button>
+            </div>
+        </div>
+        <div class="section-body" id="faq-section">
+            <div class="table-tools">
+                <div class="tool-group">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="faq-search" placeholder="Search FAQs...">
+                </div>
+                <div class="tool-group">
+                    <i class="fas fa-filter"></i>
+                    <select id="faq-category-filter">
+                        <option value="">All categories</option>
+                        {% set faq_ns = namespace(cats=[]) %}
+                        {% for f in faqs %}
+                            {% if f.category not in faq_ns.cats %}
+                                {% set faq_ns.cats = faq_ns.cats + [f.category] %}
+                            {% endif %}
+                        {% endfor %}
+                        {% for c in faq_ns.cats %}
+                            <option value="{{ c }}">{{ c|title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="data-table-container">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th><i class="fas fa-question-circle me-2"></i>Question</th>
+                                <th><i class="fas fa-tag me-2"></i>Category</th>
+                                <th><i class="fas fa-clock me-2"></i>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for faq in faqs %}
+                            <tr data-text="{{ (faq.question or '')|lower }} {{ (faq.answer or '')|lower }}" data-category="{{ faq.category }}">
+                                <td data-label="Question">{{ faq.question[:80] }}{% if faq.question|length > 80 %}...{% endif %}</td>
+                                <td data-label="Category">
+                                    <span class="badge bg-primary">{{ faq.category|title }}</span>
+                                </td>
+                                <td data-label="Created">{{ faq.created_at.strftime('%b %d, %Y') }}</td>
+                                <td data-label="Actions" class="table-actions">
+                                    <input type="checkbox" class="bulk-select" data-type="faq" data-id="{{ faq.id }}">
+                                    <form method="POST" class="delete-form" action="{{ url_for('admin') }}">
+                                        <input type="hidden" name="action" value="delete_faq">
+                                        <input type="hidden" name="faq_id" value="{{ faq.id }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this FAQ?')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="admin-section">
+        <div class="section-head section-head-inline">
+            <div>
+                <h2>Policies ({{ policies|length }})</h2>
+                <p>Structured rules and official information for users.</p>
+            </div>
+            <div class="section-actions">
+                <button class="collapse-toggle" type="button" data-target="policy-section" aria-expanded="true">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+                <button id="bulkDeletePolicy" class="btn btn-sm btn-danger" disabled>Bulk Delete Selected</button>
+            </div>
+        </div>
+        <div class="section-body" id="policy-section">
+            <div class="table-tools">
+                <div class="tool-group">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="policy-search" placeholder="Search policies...">
+                </div>
+                <div class="tool-group">
+                    <i class="fas fa-filter"></i>
+                    <select id="policy-category-filter">
+                        <option value="">All categories</option>
+                        {% set pol_ns = namespace(cats=[]) %}
+                        {% for p in policies %}
+                            {% if p.category not in pol_ns.cats %}
+                                {% set pol_ns.cats = pol_ns.cats + [p.category] %}
+                            {% endif %}
+                        {% endfor %}
+                        {% for c in pol_ns.cats %}
+                            <option value="{{ c }}">{{ c|title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="table-responsive mb-4 data-table-container">
+                <table class="table table-striped">
+                    <thead><tr><th>Title</th><th>Preview</th><th>Category</th><th>Actions</th></tr></thead>
+                    <tbody>
+                        {% for pol in policies %}
+                        <tr data-text="{{ (pol.title or '')|lower }} {{ (pol.content or '')|lower }}" data-category="{{ pol.category }}">
+                            <td data-label="Title">{{ pol.title[:50] }}...</td>
+                            <td data-label="Preview">{{ pol.content[:100] }}...</td>
+                            <td data-label="Category"><span class="badge bg-info">{{ pol.category }}</span></td>
+                            <td data-label="Actions" class="table-actions">
+                                <input type="checkbox" class="bulk-select" data-type="policy" data-id="{{ pol.id }}">
+                                <form method="POST" class="delete-form" action="{{ url_for('admin') }}">
+                                    <input type="hidden" name="action" value="delete_policy">
+                                    <input type="hidden" name="policy_id" value="{{ pol.id }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this Policy?')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-section">
+        <div class="section-head section-head-inline">
+            <div>
+                <h2>Calendar ({{ calendars|length }})</h2>
+                <p>Upcoming events and key dates.</p>
+            </div>
+            <div class="section-actions">
+                <button class="collapse-toggle" type="button" data-target="calendar-section" aria-expanded="true">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+                <button id="bulkDeleteCalendar" class="btn btn-sm btn-danger" disabled>Bulk Delete Selected</button>
+            </div>
+        </div>
+        <div class="section-body" id="calendar-section">
+            <div class="table-tools">
+                <div class="tool-group">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="calendar-search" placeholder="Search events...">
+                </div>
+            </div>
+            <div class="table-responsive mb-4 data-table-container">
+                <table class="table table-striped">
+                    <thead><tr><th>Event</th><th>Date</th><th>Description</th><th>Actions</th></tr></thead>
+                    <tbody>
+                        {% for cal in calendars %}
+                        <tr data-text="{{ (cal.event_name or '')|lower }} {{ (cal.description or '')|lower }}">
+                            <td data-label="Event">{{ cal.event_name }}</td>
+                            <td data-label="Date">{{ cal.event_date }}</td>
+                            <td data-label="Description">{{ cal.description or ''[:50] }}...</td>
+                            <td data-label="Actions" class="table-actions">
+                                <button class="btn btn-sm btn-outline-danger delete-btn" data-id="{{ cal.id }}" data-type="calendar" title="Delete Event">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-section">
+        <div class="section-head section-head-inline">
+            <div>
+                <h2>Documents ({{ documents|length }})</h2>
+                <p>Handbooks and uploaded reference materials.</p>
+            </div>
+            <div class="section-actions">
+                <button class="collapse-toggle" type="button" data-target="document-table-section" aria-expanded="true">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+                <button id="bulkDeleteDocument" class="btn btn-sm btn-danger" disabled>Bulk Delete Selected</button>
+            </div>
+        </div>
+        <div class="section-body" id="document-table-section">
+            <div class="table-tools">
+                <div class="tool-group">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="document-search" placeholder="Search documents...">
+                </div>
+                <div class="tool-group">
+                    <i class="fas fa-filter"></i>
+                    <select id="document-category-filter">
+                        <option value="">All categories</option>
+                        {% set doc_ns = namespace(cats=[]) %}
+                        {% for d in documents %}
+                            {% if d.category not in doc_ns.cats %}
+                                {% set doc_ns.cats = doc_ns.cats + [d.category] %}
+                            {% endif %}
+                        {% endfor %}
+                        {% for c in doc_ns.cats %}
+                            <option value="{{ c }}">{{ c|title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="table-responsive data-table-container">
+                <table class="table table-striped">
+                    <thead><tr><th>Title</th><th>Preview</th><th>Category</th><th>Actions</th></tr></thead>
+                    <tbody>
+                        {% for doc in documents %}
+                        <tr data-text="{{ (doc.title or '')|lower }} {{ (doc.content or '')|lower }}" data-category="{{ doc.category }}">
+                            <td data-label="Title">{{ doc.title[:50] }}...</td>
+                            <td data-label="Preview">{{ doc.content[:100] }}...</td>
+                            <td data-label="Category"><span class="badge bg-secondary">{{ doc.category }}</span></td>
+                            <td data-label="Actions" class="table-actions">
+                                <button class="btn btn-sm btn-outline-danger delete-btn" data-id="{{ doc.id }}" data-type="document" title="Delete Document">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <p class="mt-3"><small>Refresh page after adds. Edit/Delete: Extend later. Data powers chatbot!</small></p>
+</div>
+
+{% include "admin_styles_and_scripts.html" %}
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalTitle">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this <span id="deleteItemType"></span>?</p>
+                <p class="text-danger"><strong>This action cannot be undone.</strong></p>
+                <form method="POST" id="deleteForm" action="{{ url_for('admin') }}">
+                    <input type="hidden" name="action" id="deleteAction">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="deleteForm" class="btn btn-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

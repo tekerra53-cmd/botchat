@@ -1,0 +1,672 @@
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+.admin-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+    font-family: 'Space Grotesk', 'Manrope', 'Segoe UI', sans-serif;
+    --primary-color: #676f9d;
+    --primary-gradient: linear-gradient(135deg, #676f9d 0%, #424769 100%);
+    --accent-color: #676f9d;
+}
+
+.admin-container::before {
+    content: "";
+    position: absolute;
+    inset: -60px -40px auto -40px;
+    height: 320px;
+    background:
+        radial-gradient(circle at 10% 20%, rgba(103, 111, 157, 0.18), transparent 55%),
+        radial-gradient(circle at 90% 30%, rgba(66, 71, 105, 0.16), transparent 55%),
+        radial-gradient(circle at 50% 80%, rgba(45, 50, 80, 0.12), transparent 60%);
+    z-index: -1;
+    pointer-events: none;
+}
+
+.admin-header {
+    background: linear-gradient(135deg, rgba(103, 111, 157, 0.98), rgba(66, 71, 105, 0.96));
+    color: white;
+    border-radius: 18px 18px 0 0;
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+    margin: 0;
+    margin-bottom: 0;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.header-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: #fff;
+    border-radius: 999px;
+    padding: 0.35rem 0.8rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+.admin-tabs {
+    display: inline-flex;
+    gap: 0.5rem;
+    background: rgba(255,255,255,0.95);
+    border-radius: 999px;
+    padding: 0.4rem 0.75rem;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15), 0 0 0 1px rgba(255,255,255,0.9);
+    margin-bottom: 1.5rem;
+    backdrop-filter: blur(30px);
+    position: sticky;
+    top: 20px;
+    z-index: 100;
+}
+
+.tab-link {
+    flex: 0 0 auto;
+    padding: 0.7rem 1.2rem;
+    text-decoration: none;
+    color: #4a5568;
+    text-align: center;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    border-radius: 999px;
+}
+
+.tab-link:hover {
+    background: #eef0f7;
+    color: var(--primary-color);
+}
+
+.tab-link.active {
+    background: var(--primary-gradient);
+    color: white;
+    border-bottom-color: transparent;
+    box-shadow: 0 10px 20px rgba(103, 111, 157, 0.3);
+}
+
+.quick-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+    margin: 0 0 1.25rem 0;
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.quick-links a {
+    text-decoration: none;
+    color: #676f9d;
+    background: #eef0f7;
+    border: 1px solid rgba(103, 111, 157, 0.25);
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    font-weight: 600;
+}
+
+.section-subnav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.section-subnav a {
+    text-decoration: none;
+    color: #676f9d;
+    font-size: 0.8rem;
+    background: #f2f3f8;
+    border: 1px solid #d8dbea;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+}
+
+.admin-section {
+    background: rgba(255,255,255,0.92);
+    border-radius: 18px;
+    padding: 1.5rem;
+    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    backdrop-filter: blur(10px);
+}
+
+.admin-section + .admin-section {
+    margin-top: 1rem;
+}
+
+.section-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.section-head h2 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #2d3748;
+}
+
+.section-head p {
+    margin: 0;
+    color: #718096;
+    font-size: 0.9rem;
+}
+
+.section-head-inline {
+    align-items: center;
+}
+
+.section-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.admin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.25rem;
+}
+
+.admin-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: none;
+    overflow: hidden;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.admin-card .card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: #f1f5f9;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0.9rem 1rem;
+}
+
+.admin-card .card-body {
+    padding: 1rem;
+}
+
+.admin-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 18px 30px rgba(15, 23, 42, 0.12);
+}
+
+.doc-card .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.doc-card .form-row .form-group {
+    margin-bottom: 0;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.stat-card {
+    background: #f8fafc;
+    border-radius: 14px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border: 1px solid #edf2f7;
+}
+
+.stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--primary-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.stat-content h4 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.stat-content p {
+    margin: 0;
+    color: #718096;
+    font-size: 0.85rem;
+}
+
+.data-table-container {
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    overflow: hidden;
+    background: white;
+}
+
+.data-table-container .table {
+    margin: 0;
+}
+
+.data-table-container .table thead th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0.7rem 0.9rem;
+}
+
+.data-table-container .table tbody td {
+    padding: 0.7rem 0.9rem;
+    vertical-align: middle;
+    font-size: 0.9rem;
+}
+
+.data-table-container .table tbody tr {
+    transition: background 0.2s ease;
+}
+
+.data-table-container .table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.table-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.table-actions .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+.table-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.tool-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f1f5f9;
+}
+
+.tool-group input,
+.tool-group select {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 0.85rem;
+    min-width: 140px;
+}
+
+.tool-group i {
+    color: #94a3b8;
+}
+
+.collapse-toggle {
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    border-radius: 10px;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.collapse-toggle:hover {
+    background: #eef0f7;
+}
+
+.collapse-toggle.is-collapsed i {
+    transform: rotate(180deg);
+}
+
+.section-body {
+    transition: max-height 0.25s ease, opacity 0.2s ease;
+}
+
+.section-body.is-collapsed {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+@media (max-width: 900px) {
+    .admin-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .data-table-container .table thead {
+        display: none;
+    }
+
+    .data-table-container .table,
+    .data-table-container .table tbody,
+    .data-table-container .table tr,
+    .data-table-container .table td {
+        display: block;
+        width: 100%;
+    }
+
+    .data-table-container .table tr {
+        border-bottom: 1px solid #e2e8f0;
+        padding: 0.6rem 0;
+    }
+
+    .data-table-container .table tbody td {
+        padding: 0.45rem 0.9rem;
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .data-table-container .table tbody td::before {
+        content: attr(data-label);
+        color: #64748b;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    .table-actions {
+        justify-content: flex-end;
+    }
+
+    .doc-card .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Breadcrumbs Styles */
+.breadcrumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.breadcrumbs a, .breadcrumbs span {
+    text-decoration: none;
+    color: #676f9d;
+    background: #eef0f7;
+    border: 1px solid rgba(103, 111, 157, 0.25);
+    padding: 0.3rem 0.6rem;
+    border-radius: 999px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.breadcrumbs .separator {
+    color: #94a3b8;
+    font-weight: 400;
+    background: none;
+    border: none;
+    padding: 0.3rem 0;
+}
+
+.breadcrumbs a:hover {
+    background: #e3e6f3;
+}
+
+@media (max-width: 768px) {
+    .admin-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .admin-tabs {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        border-radius: 999px;
+        padding: 0.5rem;
+        top: 20px;
+    }
+    
+    .section-head {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .section-actions {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .table-tools {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .tool-group {
+        width: 100%;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const retryBtn = document.getElementById('retry-ai-btn');
+    const aiBanner = document.getElementById('ai-status-banner');
+    const aiStatusText = document.getElementById('ai-status-text');
+    if (retryBtn && aiBanner && aiStatusText) {
+        retryBtn.addEventListener('click', async function() {
+            retryBtn.disabled = true;
+            retryBtn.textContent = 'Retrying...';
+            try {
+                const response = await fetch('{{ url_for("retry_ai") }}', { method: 'POST' });
+                const data = await response.json();
+                if (data.ai_available && !data.ai_error) {
+                    aiBanner.remove();
+                } else {
+                    aiStatusText.textContent = data.ai_error || 'OpenAI client is not initialized.';
+                }
+            } catch (err) {
+                aiStatusText.textContent = 'Retry failed. Please check your network or API key.';
+            } finally {
+                retryBtn.disabled = false;
+                retryBtn.textContent = 'Retry AI';
+            }
+        });
+    }
+
+    const rebuildBtn = document.getElementById('rebuild-index-btn');
+    if (rebuildBtn && aiStatusText) {
+        rebuildBtn.addEventListener('click', async function() {
+            rebuildBtn.disabled = true;
+            rebuildBtn.textContent = 'Rebuilding...';
+            try {
+                const response = await fetch('{{ url_for("rebuild_index") }}', { method: 'POST' });
+                const data = await response.json();
+                if (data.success) {
+                    aiStatusText.textContent = 'Local index rebuilt successfully.';
+                } else {
+                    aiStatusText.textContent = data.error || 'Index rebuild failed.';
+                }
+            } catch (err) {
+                aiStatusText.textContent = 'Index rebuild failed.';
+            } finally {
+                rebuildBtn.disabled = false;
+                rebuildBtn.textContent = 'Rebuild Index';
+            }
+        });
+    }
+
+    const previewBtn = document.getElementById('preview-doc-btn');
+    const fileInput = document.getElementById('doc-file');
+    const previewBox = document.getElementById('doc-preview');
+    if (previewBtn && fileInput && previewBox) {
+        previewBtn.addEventListener('click', async function() {
+            if (!fileInput.files || fileInput.files.length === 0) {
+                previewBox.value = 'Please select a file first.';
+                return;
+            }
+            previewBox.value = 'Extracting text...';
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            try {
+                const response = await fetch('{{ url_for("preview_doc") }}', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    previewBox.value = data.error || 'Preview failed.';
+                    return;
+                }
+                previewBox.value = data.preview || '(No text extracted)';
+            } catch (err) {
+                previewBox.value = 'Preview failed. Please try again.';
+            }
+        });
+    }
+
+    document.querySelectorAll('.collapse-toggle').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const targetId = this.dataset.target;
+            const section = document.getElementById(targetId);
+            if (!section) return;
+            const isCollapsed = section.classList.toggle('is-collapsed');
+            this.classList.toggle('is-collapsed', isCollapsed);
+            this.setAttribute('aria-expanded', String(!isCollapsed));
+        });
+    });
+
+    function filterRows(searchInputId, categorySelectId, tableSelector) {
+        const searchEl = document.getElementById(searchInputId);
+        const categoryEl = document.getElementById(categorySelectId);
+        const table = document.querySelector(tableSelector);
+        if (!searchEl || !table) return;
+
+        const term = (searchEl.value || '').toLowerCase().trim();
+        const category = categoryEl ? (categoryEl.value || '').toLowerCase() : '';
+
+        table.querySelectorAll('tbody tr').forEach(row => {
+            const text = (row.dataset.text || '').toLowerCase();
+            const rowCat = (row.dataset.category || '').toLowerCase();
+            const matchesText = term === '' || text.includes(term);
+            const matchesCat = category === '' || rowCat === category;
+            row.style.display = (matchesText && matchesCat) ? '' : 'none';
+        });
+    }
+
+    const filters = [
+        { search: 'faq-search', category: 'faq-category-filter', table: '#faq-section table' },
+        { search: 'policy-search', category: 'policy-category-filter', table: '#policy-section table' },
+        { search: 'calendar-search', category: null, table: '#calendar-section table' },
+        { search: 'document-search', category: 'document-category-filter', table: '#document-table-section table' },
+    ];
+
+    filters.forEach(cfg => {
+        const searchEl = document.getElementById(cfg.search);
+        const categoryEl = cfg.category ? document.getElementById(cfg.category) : null;
+        if (searchEl) {
+            searchEl.addEventListener('input', () => filterRows(cfg.search, cfg.category, cfg.table));
+        }
+        if (categoryEl) {
+            categoryEl.addEventListener('change', () => filterRows(cfg.search, cfg.category, cfg.table));
+        }
+    });
+
+    // Delete buttons (calendar/doc) + bulk delete
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const itemId = this.dataset.id;
+            const itemType = this.dataset.type;
+            const form = document.getElementById('deleteForm');
+            if (!form) return;
+            form.innerHTML = '<input type="hidden" name="action" id="deleteAction">';
+            document.getElementById('deleteAction').value = `delete_${itemType}`;
+            form.insertAdjacentHTML('beforeend', `<input type="hidden" name="${itemType}_id" value="${itemId}">`);
+            const typeLabel = document.getElementById('deleteItemType');
+            const titleLabel = document.getElementById('deleteModalTitle');
+            if (typeLabel) typeLabel.textContent = itemType.toUpperCase();
+            if (titleLabel) titleLabel.textContent = `Delete ${itemType.charAt(0).toUpperCase() + itemType.slice(1)}`;
+            const modalEl = document.getElementById('deleteModal');
+            if (modalEl) {
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+        });
+    });
+
+    document.querySelectorAll('.bulk-select').forEach(cb => {
+        cb.addEventListener('change', updateBulkButtons);
+    });
+
+    function updateBulkButtons() {
+        const selected = document.querySelectorAll('.bulk-select:checked');
+        const buttons = document.querySelectorAll('[id^="bulkDelete"]');
+        buttons.forEach(btn => btn.disabled = selected.length === 0);
+    }
+
+    document.querySelectorAll('[id^="bulkDelete"]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const type = this.id.replace('bulkDelete', '').toLowerCase();
+            const selected = Array.from(document.querySelectorAll(`.bulk-select[data-type="${type}"]:checked`)).map(cb => cb.dataset.id);
+            if (selected.length === 0) return;
+            const form = document.getElementById('deleteForm');
+            if (!form) return;
+            form.innerHTML = '<input type="hidden" name="action" id="deleteAction">';
+            document.getElementById('deleteAction').value = `bulk_delete_${type}`;
+            form.insertAdjacentHTML('beforeend', `<input type="hidden" name="${type}_ids" value='${JSON.stringify(selected)}'>`);
+            const typeLabel = document.getElementById('deleteItemType');
+            const titleLabel = document.getElementById('deleteModalTitle');
+            if (typeLabel) typeLabel.textContent = `${selected.length} ${type.toUpperCase()}`;
+            if (titleLabel) titleLabel.textContent = `Delete ${selected.length} Selected ${type.toUpperCase()}`;
+            const modalEl = document.getElementById('deleteModal');
+            if (modalEl) {
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+        });
+    });
+});
+</script>
+
