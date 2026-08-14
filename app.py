@@ -82,7 +82,8 @@ def create_app():
                 admin_user.email = 'admin@university.edu'
             db.session.commit()
 
-        seed_common_knowledge_base()
+        if not db.session.query(KnowledgeBaseEntry).first():
+            seed_common_knowledge_base()
         rebuild_local_index()
 
     @login_manager.user_loader
