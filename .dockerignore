@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.git/
+.env
+venv/
+instance/
+*.log
+debug_*.py
+check_db*.py
+add_test.py
+TODO*.md
+app_backup.py
+app_clean.py
+app_fixed.py
+run_clean.py
+run_fixed.py
