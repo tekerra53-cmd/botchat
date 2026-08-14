@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from urllib.parse import unquote
 
 load_dotenv()
 
@@ -9,6 +10,22 @@ def clean_api_key(raw_key):
         return None
     key = raw_key.strip().strip('"').strip("'")
     return key if key else None
+
+
+def normalize_sqlite_url(raw_url, base_dir, on_vercel=False):
+    if not raw_url or not raw_url.startswith('sqlite:///'):
+        return raw_url
+
+    path = raw_url[len('sqlite:///'):]
+    if path.startswith('/') or ':' in path[:3]:
+        return raw_url
+
+    filename = os.path.basename(unquote(path)) or 'chatbot.db'
+    if on_vercel:
+        db_path = os.path.join('/tmp', filename).replace('\\', '/')
+    else:
+        db_path = os.path.join(base_dir, 'instance', filename).replace('\\', '/')
+    return f'sqlite:///{db_path}'
 
 
 class Config:
@@ -25,13 +42,14 @@ class Config:
     ) if all(os.environ.get(k) for k in ['MYSQL_USER', 'MYSQL_PASSWORD', 'MYSQL_HOST', 'MYSQL_DB']) else None
 
     if database_url:
-        SQLALCHEMY_DATABASE_URI = database_url
+        SQLALCHEMY_DATABASE_URI = normalize_sqlite_url(database_url, BASE_DIR, on_vercel=bool(os.environ.get('VERCEL')))
     elif mysql_uri:
         SQLALCHEMY_DATABASE_URI = mysql_uri
     elif os.environ.get('VERCEL'):
         SQLALCHEMY_DATABASE_URI = 'sqlite:////tmp/chatbot.db'
     else:
-        SQLALCHEMY_DATABASE_URI = 'sqlite:///chatbot.db'
+        local_db_path = os.path.join(BASE_DIR, 'instance', 'chatbot.db').replace('\\', '/')
+        SQLALCHEMY_DATABASE_URI = f'sqlite:///{local_db_path}'
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
