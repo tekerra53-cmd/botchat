@@ -20,6 +20,7 @@ import uuid
 import json
 import time
 import threading
+import tempfile
 import utils
 
 login_manager = LoginManager()
@@ -33,7 +34,17 @@ def create_app():
     login_manager.init_app(app)
     login_manager.login_view = 'login'
 
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    def _ensure_writable_upload_folder(folder_path):
+        try:
+            os.makedirs(folder_path, exist_ok=True)
+            return folder_path
+        except Exception:
+            fallback = os.path.join(tempfile.gettempdir(), 'botchat_uploads')
+            os.makedirs(fallback, exist_ok=True)
+            app.logger.warning(f'Using fallback upload folder: {fallback}')
+            return fallback
+
+    app.config['UPLOAD_FOLDER'] = _ensure_writable_upload_folder(app.config['UPLOAD_FOLDER'])
 
     try:
         init_openai(app.config)
@@ -46,7 +57,11 @@ def create_app():
         app.logger.warning(f'OpenAI initialization error: {e}')
 
     with app.app_context():
-        db.create_all()
+        try:
+            db.create_all()
+        except Exception as exc:
+            app.logger.error(f'Database initialization failed: {exc}')
+            raise
 
         # Ensure default admin
         admin_user = User.query.filter_by(username='admin').first()
