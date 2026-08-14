@@ -20,24 +20,37 @@ local_index = {
 }
 
 _QUERY_EXPANSIONS = {
-    "fee": ["tuition", "payment", "school fees", "charges"],
-    "fees": ["tuition", "payment", "school fees", "charges"],
-    "tuition": ["fees", "payment", "school fees"],
+    "fee": ["tuition", "payment", "school fees", "charges", "cost"],
+    "fees": ["tuition", "payment", "school fees", "charges", "cost"],
+    "tuition": ["fees", "payment", "school fees", "cost"],
     "id": ["student id", "id card", "identity card", "student card"],
     "student id": ["student id card", "id card", "identity card"],
-    "registration": ["course registration", "enrollment", "register"],
-    "register": ["course registration", "enrollment", "add/drop"],
-    "admission": ["admissions", "entry requirements", "entry"],
-    "hostel": ["accommodation", "residence", "housing"],
-    "library": ["library hours", "borrowing", "study space"],
-    "scholarship": ["financial aid", "bursary", "sponsorship"],
-    "result": ["results", "grades", "transcript"],
-    "exam": ["exams", "assessment", "test"],
-    "attendance": ["class attendance", "presence", "lecture attendance"],
-    "clearance": ["clearance letter", "graduation clearance", "registration clearance"],
-    "transcript": ["result slip", "academic transcript", "grades"],
-    "complaint": ["report issue", "student support", "help desk"],
-    "portal": ["student portal", "login", "account"],
+    "registration": ["course registration", "enrollment", "register", "sign up"],
+    "register": ["course registration", "enrollment", "add/drop", "sign up"],
+    "admission": ["admissions", "entry requirements", "entry", "apply"],
+    "hostel": ["accommodation", "residence", "housing", "dorm"],
+    "library": ["library hours", "borrowing", "study space", "books"],
+    "scholarship": ["financial aid", "bursary", "sponsorship", "grant"],
+    "result": ["results", "grades", "transcript", "marks"],
+    "exam": ["exams", "assessment", "test", "examination"],
+    "attendance": ["class attendance", "presence", "lecture attendance", "absence"],
+    "clearance": ["clearance letter", "graduation clearance", "registration clearance", "sign off"],
+    "transcript": ["result slip", "academic transcript", "grades", "marks"],
+    "complaint": ["report issue", "student support", "help desk", "grievance"],
+    "portal": ["student portal", "login", "account", "dashboard"],
+    "graduate": ["graduation", "convocate", "complete program"],
+    "convocation": ["graduation", "graduate", "complete program"],
+    "deadline": ["due date", "closing date", "last day", "cutoff"],
+    "payment": ["pay fees", "tuition", "school fees", "charges"],
+    "counseling": ["therapy", "mental health", "support", "wellbeing"],
+    "medical": ["health center", "clinic", "doctor", "sick"],
+    "career": ["job", "internship", "employment", "cv", "resume"],
+    "wifi": ["internet", "network", "wireless", "connection"],
+    "email": ["mail", "communication", "inbox", "student email"],
+    "safety": ["security", "emergency", "campus security", "protection"],
+    "discount": ["savings", "deals", "offers", "student deals"],
+    "club": ["society", "association", "group", "activities"],
+    "bank": ["atm", "money", "finance", "cash"],
 }
 
 def init_openai(config):
@@ -1452,7 +1465,7 @@ def search_kb_items(query, limit=3, history=None):
         faq_rows = db.session.query(FAQ).filter_by(is_active=True).limit(250).all()
         for faq in faq_rows:
             score = _score(query_norm, faq.question)
-            if score >= 0.45 and ("FAQ", faq.question.strip().lower()) not in seen_pairs:
+            if score >= 0.35 and ("FAQ", faq.question.strip().lower()) not in seen_pairs:
                 item = {
                     "type": "FAQ",
                     "snippet": faq.question,
@@ -1470,7 +1483,7 @@ def search_kb_items(query, limit=3, history=None):
                 _score(query_norm, entry.aliases or ""),
                 _score(query_norm, entry.tags or ""),
             )
-            if score >= 0.4 and ("KNOWLEDGE", (entry.question or entry.title or "").strip().lower()) not in seen_pairs:
+            if score >= 0.3 and ("KNOWLEDGE", (entry.question or entry.title or "").strip().lower()) not in seen_pairs:
                 item = _knowledge_item_to_record(entry)
                 if not item:
                     continue
@@ -1480,7 +1493,7 @@ def search_kb_items(query, limit=3, history=None):
         policies_all = db.session.query(Policy).filter_by(is_active=True).limit(100).all()
         for pol in policies_all:
             score = _score(query_norm, pol.title)
-            if score >= 0.5 and ("POLICY", pol.title.strip().lower()) not in seen_pairs:
+            if score >= 0.4 and ("POLICY", pol.title.strip().lower()) not in seen_pairs:
                 item = {
                     "type": "POLICY",
                     "snippet": pol.title,
@@ -1493,7 +1506,7 @@ def search_kb_items(query, limit=3, history=None):
         docs_all = db.session.query(Document).filter_by(is_active=True).limit(100).all()
         for doc in docs_all:
             score = _score(query_norm, doc.title)
-            if score >= 0.5 and ("DOC", doc.title.strip().lower()) not in seen_pairs:
+            if score >= 0.4 and ("DOC", doc.title.strip().lower()) not in seen_pairs:
                 item = {
                     "type": "DOC",
                     "snippet": doc.title,
@@ -1540,13 +1553,22 @@ def search_kb_items(query, limit=3, history=None):
         for hit in bm25_hits:
             _add_result(results, seen, hit)
 
+    # If still thin, use OpenAI embedding-based semantic search as a broader fallback.
+    if len(results) < limit:
+        try:
+            semantic_hits = semantic_search(base_query, limit=limit)
+            for hit in semantic_hits:
+                _add_result(results, seen, hit)
+        except Exception:
+            pass
+
     # Final scoring and dedupe.
     deduped = []
     seen_final = set()
     for r in results:
         text = (r.get("snippet") or "") + " " + (r.get("full_text") or "")
         token_overlap = len(set(_tokenize(text)).intersection(meaningful_tokens or q_tokens))
-        if q_tokens and token_overlap == 0 and r.get("type") not in {"KNOWLEDGE", "FAQ"}:
+        if q_tokens and token_overlap == 0 and r.get("type") not in {"KNOWLEDGE", "FAQ", "POLICY", "DOC", "CALENDAR"}:
             continue
         key = (r.get("type"), (r.get("snippet") or "").strip().lower())
         if key in seen_final:
