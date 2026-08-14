@@ -4,6 +4,12 @@ from urllib.parse import unquote
 
 load_dotenv()
 
+try:
+    import pymysql
+    pymysql.install_as_MySQLdb()
+except Exception:
+    pass
+
 
 def clean_api_key(raw_key):
     if not raw_key:
@@ -37,7 +43,9 @@ def _is_mysql_url(raw_url):
 def _normalize_database_url(raw_url, base_dir, on_vercel=False):
     if not raw_url:
         return None
-    if _is_mysql_url(raw_url):
+    if raw_url.startswith('mysql://') and not raw_url.startswith('mysql+pymysql://'):
+        raw_url = raw_url.replace('mysql://', 'mysql+pymysql://', 1)
+    if raw_url.startswith('mysql+pymysql://'):
         return raw_url
     if raw_url.startswith('sqlite:///'):
         return normalize_sqlite_url(raw_url, base_dir, on_vercel=on_vercel)
@@ -65,6 +73,9 @@ class Config:
     else:
         local_db_path = os.path.join(BASE_DIR, 'instance', 'chatbot.db').replace('\\', '/')
         SQLALCHEMY_DATABASE_URI = f'sqlite:///{local_db_path}'
+
+    print(f'[CONFIG] DATABASE_URL={database_url!r}')
+    print(f'[CONFIG] SQLALCHEMY_DATABASE_URI={SQLALCHEMY_DATABASE_URI!r}')
 
     if os.environ.get('UPLOAD_FOLDER'):
         UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER')

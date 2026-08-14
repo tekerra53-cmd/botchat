@@ -35,7 +35,20 @@ def create_app():
     )
     app.config.from_object(Config)
 
-    db.init_app(app)
+    if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('mysql'):
+        try:
+            import pymysql
+            pymysql.install_as_MySQLdb()
+        except ImportError:
+            print('[WARN] PyMySQL not available, falling back to SQLite')
+            app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/chatbot.db'
+
+    try:
+        db.init_app(app)
+    except Exception as exc:
+        print(f'[WARN] db.init_app failed with {app.config.get("SQLALCHEMY_DATABASE_URI")}: {exc}')
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/chatbot.db'
+        db.init_app(app)
     login_manager.init_app(app)
     setattr(login_manager, 'login_view', 'login')  # type: ignore[assignment]
 
