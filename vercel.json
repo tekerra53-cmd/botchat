@@ -6,7 +6,8 @@
   "functions": {
     "api/index.py": {
       "maxDuration": 30,
-      "excludeFiles": "{.git,.github,.venv,venv,__pycache__,instance,static/**,templates/**,*.pyc}"
+      "includeFiles": "templates/**,static/**,app.py,config.py,models.py,utils.py,wsgi.py",
+      "excludeFiles": "{.git,.github,.venv,venv,__pycache__,instance,*.pyc}"
     }
   }
 }
