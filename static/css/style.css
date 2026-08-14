@@ -89,6 +89,7 @@ body {
 .chat-wrapper {
   max-width: 800px;
   margin: 0 auto;
+  height: calc(100dvh - 140px);
   height: calc(100vh - 140px);
   display: flex;
   flex-direction: column;
@@ -274,6 +275,10 @@ body {
   line-height: 1.5;
   position: relative;
   white-space: pre-wrap;
+  direction: ltr;
+  text-align: left;
+  writing-mode: horizontal-tb;
+  transform: none;
 }
 
 .message.user {
@@ -445,10 +450,10 @@ body {
   outline: none;
   color: #2d3748;
   direction: ltr;
-  unicode-bidi: plaintext;
   text-align: left;
   caret-color: #424769;
   min-width: 0;
+  writing-mode: horizontal-tb;
 }
 
 .chat-input:focus {
@@ -631,9 +636,10 @@ body {
   .chat-input {
     border-radius: 16px 16px 0 0;
     border-bottom: 1px solid #e2e8f0;
-    min-height: 56px;
+    min-height: 80px;
     padding: 1rem;
     font-size: 16px;
+    writing-mode: horizontal-tb;
   }
 
   .btn-send {
@@ -644,8 +650,8 @@ body {
 
   .message-content {
     direction: ltr;
-    unicode-bidi: plaintext;
     text-align: left;
+    writing-mode: horizontal-tb;
   }
 }
 
@@ -830,7 +836,10 @@ body {
   }
 
   .chat-wrapper {
-    height: auto;
+    height: calc(100dvh - 120px);
+    height: calc(100vh - 120px);
+    margin: 0 0.75rem;
+    border-radius: 14px;
   }
 
   .chat-container {
