@@ -52,45 +52,50 @@ def create_app():
     app.config['UPLOAD_FOLDER'] = _ensure_writable_upload_folder(app.config['UPLOAD_FOLDER'])
 
     try:
-        init_openai(app.config)
-        import utils
-        if utils.client:
-            app.logger.info('OpenAI client initialized successfully')
-        else:
-            app.logger.warning('OpenAI client not initialized - using fallbacks')
+        with app.app_context():
+            init_openai(app.config)
+            import utils
+            if utils.client:
+                print('[INFO] OpenAI client initialized successfully')
+            else:
+                print('[WARN] OpenAI client not initialized - using fallbacks')
     except Exception as e:
-        app.logger.warning(f'OpenAI initialization error: {e}')
+        print(f'[WARN] OpenAI initialization error: {e}')
 
-    with app.app_context():
-        try:
-            db.create_all()
-        except Exception as exc:
-            app.logger.error(f'Database initialization failed: {exc}')
-            raise
+    try:
+        with app.app_context():
+            try:
+                db.create_all()
+            except Exception as exc:
+                print(f'[WARN] Database initialization skipped: {exc}')
 
-        # Ensure default admin
-        admin_user = User.query.filter_by(username='admin').first()
-        if not admin_user:
-            admin_user = User(username='admin', email='admin@university.edu', role='admin')  # type: ignore[call-arg]
-            admin_user.set_password('admin123')  # Change this!
-            db.session.add(admin_user)
-            db.session.commit()
-        else:
-            if admin_user.role != 'admin':
-                admin_user.role = 'admin'
-            if not admin_user.email:
-                admin_user.email = 'admin@university.edu'
-            db.session.commit()
+            try:
+                admin_user = User.query.filter_by(username='admin').first()
+                if not admin_user:
+                    admin_user = User(username='admin', email='admin@university.edu', role='admin')  # type: ignore[call-arg]
+                    admin_user.set_password('admin123')
+                    db.session.add(admin_user)
+                    db.session.commit()
+                else:
+                    if admin_user.role != 'admin':
+                        admin_user.role = 'admin'
+                    if not admin_user.email:
+                        admin_user.email = 'admin@university.edu'
+                    db.session.commit()
+            except Exception as exc:
+                print(f'[WARN] Admin user setup skipped: {exc}')
 
-        try:
-            if not db.session.query(KnowledgeBaseEntry).first():
-                seed_common_knowledge_base()
-        except Exception as exc:
-            current_app.logger.warning(f'Knowledge base seeding skipped: {exc}')
-        try:
-            rebuild_local_index()
-        except Exception as exc:
-            current_app.logger.warning(f'Local index rebuild skipped: {exc}')
+            try:
+                if not db.session.query(KnowledgeBaseEntry).first():
+                    seed_common_knowledge_base()
+            except Exception as exc:
+                print(f'[WARN] Knowledge base seeding skipped: {exc}')
+            try:
+                rebuild_local_index()
+            except Exception as exc:
+                print(f'[WARN] Local index rebuild skipped: {exc}')
+    except Exception as exc:
+        print(f'[WARN] Startup context setup failed: {exc}')
 
     @login_manager.user_loader
     def load_user(user_id):
