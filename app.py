@@ -82,8 +82,9 @@ def create_app():
                 admin_user.email = 'admin@university.edu'
             db.session.commit()
 
-        seed_common_knowledge_base()
-        rebuild_local_index()
+        if not os.environ.get('VERCEL') or os.environ.get('SEED_KB_ON_STARTUP') == '1':
+            seed_common_knowledge_base()
+            rebuild_local_index()
 
     @login_manager.user_loader
     def load_user(user_id):
@@ -143,9 +144,13 @@ def create_app():
         if not session_id:
             session_id = str(uuid.uuid4())
             session['chat_session_id'] = session_id
-            chat_session = ChatSession(session_id=session_id)
-            db.session.add(chat_session)
-            db.session.commit()
+            try:
+                chat_session = ChatSession(session_id=session_id)
+                db.session.add(chat_session)
+                db.session.commit()
+            except Exception as exc:
+                db.session.rollback()
+                app.logger.warning(f'Unable to persist chat session on index: {exc}')
         return render_template('index.html')
 
     @app.route('/api/chat', methods=['POST'])
@@ -165,41 +170,59 @@ def create_app():
 
         chat_session = ChatSession.query.filter_by(session_id=session_id).first()
         if not chat_session:
-            chat_session = ChatSession(session_id=session_id)
-            db.session.add(chat_session)
-            db.session.commit()
+            try:
+                chat_session = ChatSession(session_id=session_id)
+                db.session.add(chat_session)
+                db.session.commit()
+            except Exception as exc:
+                db.session.rollback()
+                app.logger.warning(f'Unable to persist chat session: {exc}')
+                chat_session = None
 
-        chat_session.last_activity = datetime.utcnow()
-        db.session.commit()
+        if chat_session:
+            chat_session.last_activity = datetime.utcnow()
+            try:
+                db.session.commit()
+            except Exception as exc:
+                db.session.rollback()
+                app.logger.warning(f'Unable to update chat session activity: {exc}')
 
-        user_msg = ChatMessage(
-            session_id=chat_session.id,
-            message_type='user',
-            content=query
-        )
-        db.session.add(user_msg)
+        if chat_session:
+            user_msg = ChatMessage(
+                session_id=chat_session.id,
+                message_type='user',
+                content=query
+            )
+            db.session.add(user_msg)
 
         # Build conversation history for context-aware responses
         history = []
-        recent = ChatMessage.query.filter_by(session_id=chat_session.id).order_by(ChatMessage.timestamp.desc()).limit(12).all()
-        for msg in reversed(recent):
-            history.append({
-                'role': 'user' if msg.message_type == 'user' else 'assistant',
-                'content': msg.content
-            })
+        if chat_session:
+            recent = ChatMessage.query.filter_by(session_id=chat_session.id).order_by(ChatMessage.timestamp.desc()).limit(12).all()
+            for msg in reversed(recent):
+                history.append({
+                    'role': 'user' if msg.message_type == 'user' else 'assistant',
+                    'content': msg.content
+                })
 
         response, sources = generate_rag_response(query, history=history)
 
-        bot_msg = ChatMessage(
-            session_id=chat_session.id,
-            message_type='bot',
-            content=response,
-            sources=json.dumps(sources) if sources else None
-        )
-        db.session.add(bot_msg)
-        db.session.commit()
+        bot_msg = None
+        if chat_session:
+            bot_msg = ChatMessage(
+                session_id=chat_session.id,
+                message_type='bot',
+                content=response,
+                sources=json.dumps(sources) if sources else None
+            )
+            try:
+                db.session.add(bot_msg)
+                db.session.commit()
+            except Exception as exc:
+                db.session.rollback()
+                app.logger.warning(f'Unable to persist chat message: {exc}')
 
-        return jsonify({'response': response, 'sources': sources, 'message_id': bot_msg.id})
+        return jsonify({'response': response, 'sources': sources, 'message_id': bot_msg.id if bot_msg else None})
 
     @app.route('/api/feedback', methods=['POST'])
     def submit_feedback():
