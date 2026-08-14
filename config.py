@@ -31,7 +31,6 @@ def normalize_sqlite_url(raw_url, base_dir, on_vercel=False):
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'hardcoded-fallback-for-dev-only'
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-    UPLOAD_FOLDER = os.path.join(BASE_DIR, 'instance', 'uploads')
     MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # 10 MB
     SHOW_AI_WARNING = False
 
@@ -50,6 +49,13 @@ class Config:
     else:
         local_db_path = os.path.join(BASE_DIR, 'instance', 'chatbot.db').replace('\\', '/')
         SQLALCHEMY_DATABASE_URI = f'sqlite:///{local_db_path}'
+
+    if os.environ.get('UPLOAD_FOLDER'):
+        UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER')
+    elif os.environ.get('VERCEL'):
+        UPLOAD_FOLDER = '/tmp/uploads'
+    else:
+        UPLOAD_FOLDER = os.path.join(BASE_DIR, 'instance', 'uploads')
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
