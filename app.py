@@ -82,9 +82,8 @@ def create_app():
                 admin_user.email = 'admin@university.edu'
             db.session.commit()
 
-        if not os.environ.get('VERCEL') or os.environ.get('SEED_KB_ON_STARTUP') == '1':
-            seed_common_knowledge_base()
-            rebuild_local_index()
+        seed_common_knowledge_base()
+        rebuild_local_index()
 
     @login_manager.user_loader
     def load_user(user_id):

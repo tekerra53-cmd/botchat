@@ -2423,7 +2423,7 @@ def _compose_local_response(query, items):
     best = ranked[0]
     best_score = _relevance_score(best)
 
-    if best_score < 0.7:
+    if best_score < 0.2:
         return "", []
 
     if best_score <= 0 and len(ranked) > 1:
