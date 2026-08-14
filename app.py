@@ -46,7 +46,7 @@ def create_app():
         except Exception:
             fallback = os.path.join(tempfile.gettempdir(), 'botchat_uploads')
             os.makedirs(fallback, exist_ok=True)
-            app.logger.warning(f'Using fallback upload folder: {fallback}')
+            print(f'[WARN] Using fallback upload folder: {fallback}')
             return fallback
 
     app.config['UPLOAD_FOLDER'] = _ensure_writable_upload_folder(app.config['UPLOAD_FOLDER'])
